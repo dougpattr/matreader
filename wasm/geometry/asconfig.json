@@ -1,0 +1,16 @@
+{
+  "targets": {
+    "release": {
+      "outFile": "../../src/wasm/geometry.wasm",
+      "textFile": "build/geometry.wat",
+      "optimizeLevel": 3,
+      "shrinkLevel": 1,
+      "noAssert": true,
+      "runtime": "stub",
+      "sourceMap": false
+    }
+  },
+  "options": {
+    "exportRuntime": false
+  }
+}

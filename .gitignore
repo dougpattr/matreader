@@ -1,0 +1,32 @@
+# dependências e saídas de build
+node_modules/
+dist/
+dev-dist/
+coverage/
+*.tsbuildinfo
+
+# recursos copiados de node_modules por scripts/copy-vendor.mjs
+public/vendor/
+
+# saídas nativas do Capacitor (geradas com `npx cap add`)
+android/
+ios/
+
+# scope do Power Automate com dados pessoais (gerado por `npm run scope`)
+power-automate/local/
+
+# editor e sistema
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+*.log
+.env
+.env.*
+
+# texto WebAssembly gerado pelo AssemblyScript (para inspeção)
+wasm/**/build/
+
+# configuração local do Claude Code (servidores de pré-visualização)
+.claude/

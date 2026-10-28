@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>MatReader · Matrículas</title>
+    <meta name="description" content="Transforma a matrícula do imóvel em documento conferido, desenha o terreno sobre o satélite e junta PDFs — funciona offline." />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#5f6787" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#23263a" media="(prefers-color-scheme: dark)" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="MatReader" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <link rel="icon" href="/icons/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <style>
+      /* Abertura antes do JavaScript: a linha desenhada que se enche,
+         como no carregador do Nomadic Tribe. O app a remove ao montar. */
+      #boot {
+        position: fixed; inset: 0; z-index: 9999; display: grid; place-items: center;
+        background: #5f6787; transition: opacity 0.5s cubic-bezier(0.215, 0.61, 0.355, 1);
+      }
+      #boot svg { width: 10px; height: 180px; overflow: visible; }
+      #boot .guide { stroke: rgba(255, 255, 255, 0.28); }
+      #boot .fill { stroke: #fff; stroke-dasharray: 190; stroke-dashoffset: 190; animation: boot-fill 1.6s cubic-bezier(0.215, 0.61, 0.355, 1) infinite; }
+      #boot p { position: absolute; bottom: 32px; left: 0; right: 0; margin: 0; text-align: center; color: rgba(255,255,255,.75);
+        font: 500 12px/1.4 Montserrat, "Segoe UI", system-ui, sans-serif; letter-spacing: .14em; text-transform: uppercase; }
+      #boot.out { opacity: 0; pointer-events: none; }
+      @keyframes boot-fill { to { stroke-dashoffset: 0; } }
+      @media (prefers-reduced-motion: reduce) { #boot .fill { animation: none; stroke-dashoffset: 0; } }
+      @media (prefers-color-scheme: dark) { #boot { background: #23263a; } }
+    </style>
+  </head>
+  <body>
+    <div id="boot" aria-hidden="true">
+      <svg viewBox="0 0 10 180" fill="none" stroke-linecap="round">
+        <path class="guide" stroke-width="1.2" d="M5 178c-.6-14 1.2-26 .4-40s-1.6-24-.2-38 1.4-25 .2-38-1.3-26-.3-40" />
+        <path class="fill" stroke-width="3.4" d="M5 178c-.6-14 1.2-26 .4-40s-1.6-24-.2-38 1.4-25 .2-38-1.3-26-.3-40" />
+      </svg>
+      <p>MatReader</p>
+    </div>
+    <div id="app"></div>
+    <noscript>O MatReader precisa de JavaScript ativado para funcionar.</noscript>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

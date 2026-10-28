@@ -1,0 +1,154 @@
+/* ==========================================================================
+   FICHA DO SISTEMA VISUAL — "Papel & Tinta"
+   Inspirado no Nomadic Tribe (makemepulse 2019): papel creme com grão,
+   ardósia, traço de nanquim, rosa-pó, sálvia e mostarda. Toda cor, medida
+   e tempo vive aqui. Pares texto/fundo medidos em ≥ 4,5:1.
+   ========================================================================== */
+:root {
+  color-scheme: light;
+
+  /* papel */
+  --paper: #f4ede3;
+  --paper-2: #fbf7f1;
+  --paper-3: #ece3d5;
+  --paper-4: #e2d7c6;
+
+  /* tinta */
+  --ink: #1e1c24;
+  --ink-2: #474457;
+  --ink-3: #66637a;
+  --line: rgba(30, 28, 36, 0.13);
+  --line-2: rgba(30, 28, 36, 0.24);
+  --ink-stroke: #24222b;
+
+  /* ardósia (a cor-marca do Nomadic Tribe) */
+  --slate: #5f6787;
+  --slate-2: #4b5373;
+  --slate-3: #7a84a3;
+  --slate-soft: #e3e5ee;
+  --on-slate: #fbf7f1;
+
+  /* paleta das ilustrações */
+  --rose: #e4b4a9;
+  --rose-ink: #974a40;
+  --rose-soft: #f5e2dc;
+  --sage: #9cb8b3;
+  --teal: #3f7470;
+  --teal-soft: #dcebe7;
+  --mustard: #e5c35b;
+  --mustard-ink: #765909;
+  --mustard-soft: #f6eac6;
+  --sky: #8ba7c5;
+  --sky-soft: #e1e9f2;
+
+  /* estados */
+  --ok: #2c6b54;
+  --ok-soft: #dcece3;
+  --warn: #765909;
+  --warn-soft: #f6eac6;
+  --bad: #a13b32;
+  --bad-soft: #f6dedb;
+  --info: #4b5373;
+  --info-soft: #e3e5ee;
+
+  /* grão do papel (SVG procedural, sem imagem externa) */
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .12 0 0 0 0 .11 0 0 0 0 .14 0 0 0 .085 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --hatch: repeating-linear-gradient(-45deg, transparent 0 5px, var(--line) 5px 6px);
+
+  /* tipografia */
+  --f-ui: 'Montserrat', 'Segoe UI Variable Text', 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
+  --f-display: 'Unbounded', 'Montserrat', 'Segoe UI', system-ui, sans-serif;
+  --f-mono: 'IBM Plex Mono', 'Cascadia Mono', Consolas, ui-monospace, monospace;
+  --fs-xs: 11px;
+  --fs-sm: 12.5px;
+  --fs-md: 14px;
+  --fs-lg: 15.5px;
+  --fs-h3: 17px;
+  --fs-h2: 20px;
+
+  /* espaço — escala de 4 */
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s5: 20px;
+  --s6: 24px;
+  --s7: 32px;
+  --s8: 40px;
+  --s9: 56px;
+  --gutter: 16px;
+  --tile-pad: 16px;
+
+  /* forma */
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 16px;
+  --r-plaque: 5px 5px 22px 22px;
+  --r-arch: 999px 999px 18px 18px;
+  --stroke: 1.6px;
+
+  /* sombra de papel */
+  --shadow-lift: 0 1px 0 rgba(30, 28, 36, 0.05), 0 16px 32px -22px rgba(30, 28, 36, 0.45);
+  --shadow-pop: 0 30px 70px -30px rgba(30, 28, 36, 0.6);
+
+  /* movimento — easeOutCubic, a curva do site de referência */
+  --ease: cubic-bezier(0.215, 0.61, 0.355, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --d1: 140ms;
+  --d2: 260ms;
+  --d3: 480ms;
+  --d4: 820ms;
+
+  --header-h: 64px;
+  --tabbar-h: 64px;
+}
+
+:root.theme-noite {
+  color-scheme: dark;
+  --paper: #232637;
+  --paper-2: #2b2f44;
+  --paper-3: #1d2030;
+  --paper-4: #383d57;
+  --ink: #f1e9dd;
+  --ink-2: #d2c9bd;
+  --ink-3: #aaa3b2;
+  --line: rgba(241, 233, 221, 0.13);
+  --line-2: rgba(241, 233, 221, 0.26);
+  --ink-stroke: #e9e1d4;
+  --slate: #aab2d4;
+  --slate-2: #c5cbe8;
+  --slate-3: #8f98bf;
+  --slate-soft: #363c58;
+  --on-slate: #1d2030;
+  --rose: #e8b9ae;
+  --rose-ink: #f1b4a7;
+  --rose-soft: #47313a;
+  --sage: #9cc0ba;
+  --teal: #8fd0c6;
+  --teal-soft: #22403f;
+  --mustard: #e9c766;
+  --mustard-ink: #f1d47c;
+  --mustard-soft: #433a1d;
+  --sky: #9db8d6;
+  --sky-soft: #2a3650;
+  --ok: #92d8b7;
+  --ok-soft: #1f3a33;
+  --warn: #f1d47c;
+  --warn-soft: #433a1d;
+  --bad: #ff9d92;
+  --bad-soft: #4a2727;
+  --info: #c5cbe8;
+  --info-soft: #363c58;
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 .97 0 0 0 0 .92 0 0 0 .06 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --shadow-lift: 0 1px 0 rgba(0, 0, 0, 0.3), 0 16px 32px -20px rgba(0, 0, 0, 0.85);
+  --shadow-pop: 0 30px 70px -30px rgba(0, 0, 0, 0.9);
+}
+
+@media (max-width: 991px) {
+  :root {
+    --gutter: 12px;
+    --tile-pad: 14px;
+    --header-h: 56px;
+  }
+}

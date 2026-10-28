@@ -1,0 +1,71 @@
+/* Impressão: só o documento (montado em #print-root por app/print.ts). */
+#print-root {
+  display: none;
+}
+
+@media print {
+  @page {
+    size: A4;
+    margin: 16mm 14mm 14mm;
+  }
+  html,
+  body {
+    background: #fff !important;
+    color: #000 !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+  ion-app,
+  #app,
+  .companion,
+  #boot {
+    display: none !important;
+  }
+  #print-root {
+    display: block !important;
+    --ink: #000;
+    --ink-2: #222;
+    --ink-3: #555;
+    --ink-stroke: #000;
+    --line: #ccc;
+    --line-2: #999;
+    --paper-2: #fff;
+    --paper-3: #f4f4f4;
+    --slate: #000;
+    --slate-2: #000;
+    --rose: #999;
+    --rose-ink: #444;
+    color: #000;
+  }
+  #print-root .doc {
+    font-size: 10.5pt;
+  }
+  #print-root .doc .meas {
+    max-width: none;
+  }
+  #print-root .chip {
+    border: 0.6pt solid #000 !important;
+    background: #fff !important;
+    color: #000 !important;
+  }
+  #print-root .act-tag {
+    background: #fff !important;
+    color: #000 !important;
+    border: 0.6pt solid #000;
+  }
+  #print-root .check,
+  #print-root .owner {
+    background: #fff !important;
+    border: 0.4pt solid #bbb;
+  }
+  #print-root .tablewrap {
+    overflow: visible !important;
+  }
+  #print-root .dtable {
+    min-width: 0;
+  }
+  #print-root a {
+    color: #000 !important;
+    text-decoration: none;
+  }
+}

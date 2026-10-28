@@ -1,0 +1,526 @@
+/* ==========================================================================
+   BASE E PRIMITIVAS COMPARTILHADAS
+   Componentes com estilo próprio guardam o CSS no próprio .vue; aqui fica
+   o que aparece em todo canto: placas (botões), botões redondos de tinta,
+   selos, campos e utilidades.
+   ========================================================================== */
+html,
+body {
+  font-family: var(--f-ui);
+  font-size: var(--fs-md);
+  line-height: 1.55;
+  color: var(--ink);
+  background: var(--paper);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+h1,
+h2,
+h3,
+h4 {
+  margin: 0;
+  line-height: 1.2;
+  font-weight: 700;
+}
+p {
+  margin: 0;
+}
+button,
+input,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+}
+::selection {
+  background: color-mix(in srgb, var(--rose) 55%, transparent);
+  color: var(--ink);
+}
+:focus-visible {
+  outline: 2px solid var(--slate-2);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+a {
+  color: var(--slate-2);
+}
+
+.sr-only {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+.mono {
+  font-family: var(--f-mono);
+  font-variant-ligatures: none;
+  font-size: 0.93em;
+}
+.num {
+  font-variant-numeric: tabular-nums;
+}
+.eyebrow {
+  font-family: var(--f-ui);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.muted {
+  color: var(--ink-3);
+}
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+}
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  flex-wrap: wrap;
+}
+.grow {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.hidden {
+  display: none !important;
+}
+
+.scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-2) transparent;
+}
+.scroll::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+.scroll::-webkit-scrollbar-thumb {
+  background: var(--line-2);
+  border-radius: 99px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+
+/* ícones de traço (sprite em src/assets/ink-sprite.ts) */
+.ink-icon {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.ink-icon.sm {
+  width: 16px;
+  height: 16px;
+}
+.ink-icon.lg {
+  width: 28px;
+  height: 28px;
+}
+.ink-icon.xl {
+  width: 44px;
+  height: 44px;
+  stroke-width: 1.4;
+}
+
+/* ---------- PLACA: o botão do Nomadic Tribe ----------
+   Topo reto, fundo arredondado, faixa creme por dentro do contorno de
+   nanquim e triangulinhos nos cantos de baixo. */
+.plaque {
+  --pl-bg: var(--paper-2);
+  --pl-fg: var(--ink);
+  --pl-edge: var(--ink-stroke);
+  --pl-band: var(--paper-2);
+  --pl-line: var(--line-2);
+  --pl-tri: var(--slate-3);
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 20px 2px;
+  border: var(--stroke) solid var(--pl-edge);
+  border-radius: var(--r-plaque);
+  background-color: var(--pl-bg);
+  background-image: var(--grain);
+  color: var(--pl-fg);
+  font: 600 13px/1.15 var(--f-ui);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  box-shadow:
+    inset 0 0 0 3px var(--pl-band),
+    inset 0 0 0 4px var(--pl-line);
+  transition:
+    background-color var(--d2) var(--ease),
+    color var(--d1) var(--ease),
+    transform var(--d1) var(--ease),
+    box-shadow var(--d2) var(--ease);
+  -webkit-tap-highlight-color: transparent;
+}
+.plaque::before,
+.plaque::after {
+  content: '';
+  position: absolute;
+  bottom: 6px;
+  width: 7px;
+  height: 7px;
+  background: var(--pl-tri);
+  opacity: 0.6;
+  pointer-events: none;
+}
+.plaque::before {
+  left: 7px;
+  clip-path: polygon(0 0, 0 100%, 100% 100%);
+}
+.plaque::after {
+  right: 7px;
+  clip-path: polygon(100% 0, 0 100%, 100% 100%);
+}
+.plaque:hover:not(:disabled) {
+  --pl-bg: var(--paper-3);
+}
+.plaque:active:not(:disabled) {
+  transform: translateY(1px);
+}
+.plaque:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.plaque--primary {
+  --pl-bg: var(--slate);
+  --pl-fg: var(--on-slate);
+  --pl-band: var(--paper-2);
+  --pl-line: rgba(30, 28, 36, 0.35);
+  --pl-tri: var(--sky-soft);
+}
+.plaque--primary:hover:not(:disabled) {
+  --pl-bg: var(--slate-3);
+}
+:root.theme-noite .plaque--primary {
+  --pl-band: var(--paper-3);
+  --pl-line: rgba(0, 0, 0, 0.4);
+}
+.plaque--rose {
+  --pl-bg: var(--rose);
+  --pl-fg: #2b1d1a;
+  --pl-tri: var(--rose-ink);
+}
+.plaque--rose:hover:not(:disabled) {
+  --pl-bg: color-mix(in srgb, var(--rose) 80%, #fff);
+}
+.plaque--danger {
+  --pl-fg: var(--bad);
+  --pl-edge: var(--bad);
+  --pl-tri: var(--bad);
+}
+.plaque--danger:hover:not(:disabled) {
+  --pl-bg: var(--bad-soft);
+}
+.plaque--ghost {
+  --pl-edge: transparent;
+  --pl-band: transparent;
+  --pl-line: transparent;
+  background-image: none;
+  --pl-bg: transparent;
+  padding: 0 12px 2px;
+}
+.plaque--ghost::before,
+.plaque--ghost::after {
+  display: none;
+}
+.plaque--ghost:hover:not(:disabled) {
+  --pl-bg: var(--paper-3);
+}
+.plaque--sm {
+  min-height: 32px;
+  padding: 0 14px 1px;
+  font-size: 12px;
+  --r-plaque: 4px 4px 16px 16px;
+}
+.plaque--sm::before,
+.plaque--sm::after {
+  bottom: 5px;
+  width: 5px;
+  height: 5px;
+}
+.plaque--lg {
+  min-height: 52px;
+  padding: 0 28px 3px;
+  font-size: 14.5px;
+  --r-plaque: 6px 6px 28px 28px;
+}
+.plaque--block {
+  display: flex;
+  width: 100%;
+}
+
+/* ---------- botão redondo de tinta (como o botão de som do site) ---------- */
+.ink-round {
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border-radius: 50%;
+  border: 2px solid var(--ink-stroke);
+  background: var(--paper-2);
+  color: var(--ink);
+  cursor: pointer;
+  transition:
+    background-color var(--d1) var(--ease),
+    transform var(--d1) var(--ease);
+  -webkit-tap-highlight-color: transparent;
+}
+.ink-round:hover {
+  background: var(--slate-soft);
+}
+.ink-round:active {
+  transform: translateY(1px) scale(0.97);
+}
+.ink-round[aria-pressed='true'],
+.ink-round.on {
+  background: var(--ink);
+  color: var(--paper-2);
+}
+.ink-round.sm {
+  width: 34px;
+  height: 34px;
+  border-width: 1.6px;
+}
+.ink-round.ghost {
+  border-color: transparent;
+  background: transparent;
+}
+.ink-round.ghost:hover {
+  background: var(--paper-3);
+}
+.ink-round:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ---------- selos ---------- */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px 3px 9px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font: 600 10.5px/1.35 var(--f-ui);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.chip .ink-icon {
+  width: 13px;
+  height: 13px;
+  stroke-width: 2;
+}
+.chip--ok {
+  background: var(--ok-soft);
+  color: var(--ok);
+  border-color: color-mix(in srgb, var(--ok) 35%, transparent);
+}
+.chip--warn {
+  background: var(--warn-soft);
+  color: var(--warn);
+  border-color: color-mix(in srgb, var(--warn) 38%, transparent);
+}
+.chip--bad {
+  background: var(--bad-soft);
+  color: var(--bad);
+  border-color: color-mix(in srgb, var(--bad) 38%, transparent);
+}
+.chip--info {
+  background: var(--info-soft);
+  color: var(--info);
+  border-color: color-mix(in srgb, var(--info) 30%, transparent);
+}
+.chip--mute,
+.chip--na {
+  background: var(--paper-3);
+  color: var(--ink-3);
+  border-color: var(--line);
+}
+.chip--rose {
+  background: var(--rose-soft);
+  color: var(--rose-ink);
+  border-color: color-mix(in srgb, var(--rose-ink) 35%, transparent);
+}
+button.chip {
+  min-height: 28px;
+  cursor: pointer;
+}
+
+/* ---------- campos ---------- */
+.field {
+  display: grid;
+  gap: 6px;
+}
+.field > label,
+.label {
+  font: 700 10.5px/1.3 var(--f-ui);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.field small,
+.hint {
+  font-size: 12px;
+  color: var(--ink-3);
+  line-height: 1.45;
+}
+.input {
+  appearance: none;
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 12px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--line-2);
+  background: var(--paper-3);
+  color: var(--ink);
+  font: 400 14px/1.4 var(--f-ui);
+  transition:
+    border-color var(--d1) var(--ease),
+    box-shadow var(--d1) var(--ease);
+}
+.input::placeholder {
+  color: var(--ink-3);
+  opacity: 0.85;
+}
+.input:hover {
+  border-color: var(--ink-3);
+}
+.input:focus {
+  outline: none;
+  border-color: var(--slate);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--slate) 24%, transparent);
+}
+textarea.input {
+  min-height: 120px;
+  resize: vertical;
+  font: 400 12.5px/1.55 var(--f-mono);
+}
+
+.switch-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--paper-3);
+  cursor: pointer;
+}
+.switch-row b {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+}
+.switch-row span {
+  display: block;
+  font-size: 12px;
+  color: var(--ink-3);
+  line-height: 1.45;
+}
+.switch-row ion-toggle {
+  margin-left: auto;
+  flex: none;
+}
+
+kbd {
+  font-family: var(--f-mono);
+  font-size: 11.5px;
+  background: var(--paper-3);
+  border: 1px solid var(--line-2);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  padding: 1px 6px;
+  color: var(--ink);
+}
+
+/* barra de progresso de traço (usada em fila de PDF e jornada) */
+.ink-bar {
+  position: relative;
+  height: 6px;
+  border-radius: 99px;
+  background: var(--paper-4);
+  overflow: hidden;
+}
+.ink-bar > i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 99px;
+  background: var(--slate);
+  transition: width var(--d2) var(--ease);
+}
+.ink-bar.indeterminate > i {
+  width: 36%;
+  animation: bar-slide 1.6s var(--ease-in-out) infinite;
+}
+@keyframes bar-slide {
+  from {
+    left: -40%;
+  }
+  to {
+    left: 104%;
+  }
+}
+
+@media (pointer: coarse) {
+  button.chip {
+    min-height: 40px;
+    padding: 6px 12px;
+  }
+  ion-segment-button {
+    min-height: 40px;
+  }
+  .plaque {
+    min-height: 44px;
+  }
+  .plaque--sm {
+    min-height: 40px;
+  }
+  .ink-round {
+    width: 44px;
+    height: 44px;
+  }
+  .ink-round.sm {
+    width: 40px;
+    height: 40px;
+  }
+}
+
+/* movimento reduzido: pelo sistema ou pela preferência do app */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+:root.still *,
+:root.still *::before,
+:root.still *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+}

@@ -2,10 +2,10 @@
 
 Transforma a **matrícula de um imóvel** em documento conferido, desenha o **terreno sobre o satélite**, junta PDFs e guarda tudo num **acervo local** — no navegador, no celular ou instalado como app, **mesmo sem internet**.
 
-PWA em **Ionic 8 + Vue 3 + TypeScript**, com **WebAssembly** em três frentes (núcleo geométrico próprio, OCR e decodificadores de PDF). Visual "Papel & Tinta", inspirado no [Nomadic Tribe](https://2019.makemepulse.com/) da makemepulse: papel creme com grão, ardósia, traço de nanquim, janela em arco, setas desenhadas à mão e animações com função.
+PWA em **Ionic 8 + Vue 3 + TypeScript**, com **WebAssembly** em três frentes (núcleo geométrico próprio, OCR e decodificadores de PDF). Visual "Papel & Tinta", inspirado no [Nomadic Tribe](https://2019.makemepulse.com/) da makemepulse: papel creme com grão, ardósia, traço de nanquim vivo (a moldura "ferve" no hover), paisagem com ciclo dia/noite na Entrada, cabeçalho e barra de abas flutuantes, setas desenhadas à mão e animações com função.
 
 <p align="center">
-  <img src="docs/img/desktop.jpg" alt="Painel no desktop: Resumo, Entrada em arco e Jornada" width="68%">
+  <img src="docs/img/desktop.jpg" alt="Painel no desktop: Resumo, Entrada e Jornada" width="68%">
   &nbsp;
   <img src="docs/img/celular.jpg" alt="Celular: aba Início com abas Ionic" width="24%">
 </p>
@@ -67,7 +67,9 @@ flowchart LR
   I --> J[conferências → documento, terreno, acervo]
 ```
 
-**Layout:** no desktop (≥ 992 px) tudo fica visível numa página só (bento em 12 colunas; a primeira fileira é o tríptico com a Entrada em arco no centro). Abaixo disso, abas Ionic — Início, Documento, Terreno, Arquivos, Acervo — com alvos de toque de 40–44 px.
+**Layout:** no desktop (≥ 992 px) tudo fica visível numa página só (bento em 12 colunas; a primeira fileira é o tríptico com a Entrada no centro), sob um cabeçalho flutuante cujo menu leva a cada bloco — o bloco responde com a moldura na sua cor e um círculo de caneta em volta do título. Abaixo disso, abas Ionic — Início, Documento, Terreno, Arquivos, Acervo — numa barra flutuante, com alvos de toque de 40–44 px.
+
+**Sistema visual:** tudo o que se clica é pílula com contorno de nanquim e um fio interno (botões, campos, seletores, segmentos), em três alturas (34 · 42 · 52 px; 40 · 44 · 52 no toque); o que guarda conteúdo é cartão. Os ícones têm gestos próprios no hover e no foco (a seta desce, a tampa abre, a engrenagem gira), e tudo respeita "menos movimento" do sistema e a chave de animações do app.
 
 ## WebAssembly
 
@@ -86,21 +88,29 @@ Os ícones do PWA também são gerados com **resvg em WebAssembly** (`npm run ic
 
 ## Integração com o Power Automate
 
-O app extrai o texto no aparelho e envia só o texto ao seu fluxo. Contrato `matreader/fluxo@2`:
+O app extrai o texto no aparelho e envia só o texto ao seu fluxo. O agente costuma levar **vários minutos**, e a resposta HTTP síncrona do Power Automate morre em ~2 min (era o erro 504 `'Responder_sucesso' … timed out`). Por isso o contrato `matreader/fluxo@3` trabalha **por tarefa**: o fluxo responde na hora com um número, o agente roda em segundo plano e grava o resultado num arquivo do OneDrive, e o app consulta até ficar pronto.
 
 ```jsonc
-// pedido (POST)
-{ "contrato": "matreader/fluxo@2", "app": { "nome": "MatReader", "versao": "4.0.0" },
+// 1. converter (POST) → resposta imediata
+{ "contrato": "matreader/fluxo@3", "acao": "converter", "app": { "nome": "MatReader", "versao": "4.1.0" },
   "filename": "…", "texto": "=== Página 1 ===\n…", "paginas": 3, "metodo_texto": "pdf-texto | ocr | misto",
-  "ocr_confianca": 91, "caracteres": 18234, "sha256": "…", "base64Encoded": "… (só para o fluxo antigo)" }
-// resposta
-{ "ok": true, "versao": "mat-flow/2.0", "resposta": "<texto do agente com o JSON>", "meta": { … } }
-{ "ok": false, "mensagem": "…", "detalhe": "…", "etapa": "…" }
-// teste de conexão
-{ "ping": true }  →  { "ok": true, "pong": true, "versao": "…", "agente": "…" }
+  "ocr_confianca": 91, "caracteres": 18234, "sha256": "…" }
+→ { "ok": true, "status": "processando", "tarefa": "08584…", "versao": "mat-flow/3.0" }
+
+// 2. consultar (a cada 5 s, depois 10 s) até sair de "processando"
+{ "contrato": "matreader/fluxo@3", "acao": "consultar", "tarefa": "08584…" }
+→ { "ok": true, "status": "processando" }
+→ { "ok": true, "versao": "mat-flow/3.0", "resposta": "<texto do agente com o JSON>", "meta": { … } }
+→ { "ok": false, "mensagem": "…", "detalhe": "…", "etapa": "…" }
+
+// 3. concluir: apaga o arquivo da tarefa no OneDrive
+{ "contrato": "matreader/fluxo@3", "acao": "concluir", "tarefa": "08584…" }
+
+// teste de conexão (não gasta o agente)
+{ "ping": true, "acao": "ping" }  →  { "ok": true, "pong": true, "versao": "mat-flow/3.0", "modo": "tarefa", "agente": "…" }
 ```
 
-Passo a passo em [`power-automate/README.md`](power-automate/README.md). O app também aceita o fluxo antigo (resposta = JSON direto) e a resposta assíncrona do Power Automate (202 + `Location`).
+Se a página fechar no meio, a tarefa fica guardada no aparelho e o app **retoma a consulta sozinho** ao abrir de novo (até 45 min). O número da tarefa é saneado no fluxo antes de virar nome de arquivo. Passo a passo em [`power-automate/README.md`](power-automate/README.md). O app também aceita o fluxo antigo (resposta = JSON direto) e o síncrono `fluxo@2`.
 
 ## Desenvolvimento
 

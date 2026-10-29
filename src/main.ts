@@ -21,6 +21,8 @@ import '@fontsource/ibm-plex-mono/latin-500.css';
 import './styles/tokens.css';
 import './styles/ionic-theme.css';
 import './styles/base.css';
+import './styles/controls.css';
+import './styles/motion.css';
 import './styles/document.css';
 import './styles/print.css';
 
@@ -33,6 +35,7 @@ import { inkSpriteMarkup } from './assets/ink-sprite';
 import { toast } from './composables/useToast';
 import { router } from './router';
 import { registerPwa } from './services/pwa';
+import { useFlowStore } from './stores/flow';
 import { useLibraryStore } from './stores/library';
 import { useMatriculaStore } from './stores/matricula';
 import { useSettingsStore } from './stores/settings';
@@ -75,7 +78,17 @@ async function boot() {
     onOfflineReady: () => void toast('Pronto: o MatReader agora abre mesmo sem internet.', { type: 'ok' }),
   });
 
-  if (!restored) {
+  // conversão que ficou em andamento no fluxo (app fechado no meio): retoma sozinha
+  const flow = useFlowStore();
+  if (flow.pendingTask) {
+    void toast('Retomando a conversão que ficou em andamento no seu fluxo…', { ms: 5000 });
+    flow
+      .resumePending()
+      .then((ok) => {
+        if (ok) void toast(`Pronto! ${mat.label} recebida e conferida.`, { type: 'ok' });
+      })
+      .catch((e: Error) => void toast(`A conversão pendente não voltou: ${e.message}`, { type: 'erro' }));
+  } else if (!restored) {
     const actions = useAppActions();
     setTimeout(() => {
       void toast('Comece soltando o PDF da matrícula na Entrada — ou veja o exemplo funcionando.', {

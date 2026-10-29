@@ -11,10 +11,8 @@ import { fmt } from '@/core/format';
 import { val } from '@/core/text';
 import { useLibraryStore } from '@/stores/library';
 import { useMatriculaStore } from '@/stores/matricula';
-import { useUiStore } from '@/stores/ui';
 
 const mat = useMatriculaStore();
-const ui = useUiStore();
 const lib = useLibraryStore();
 const actions = useAppActions();
 
@@ -53,13 +51,13 @@ function seeChecks() {
 <template>
   <Tile id="resumo" :index="3" title="Resumo" :sub="sub" picto="crystal" accent="mustard" style="--i: 2">
     <template #tools>
-      <span v-if="!ui.isDesktop && lib.saveStatus.text" class="chip" :class="`chip--${lib.saveStatus.kind || 'mute'}`">
+      <span v-if="lib.saveStatus.text" class="chip save-chip-tile" :class="`chip--${lib.saveStatus.kind || 'mute'}`">
         <Icon :name="lib.saveStatus.kind === 'ok' ? 'check' : 'info'" size="sm" />{{ lib.saveStatus.text }}
       </span>
     </template>
 
     <EmptyState v-if="!d" picto="crystal" title="Nenhuma matrícula aberta" text="Converta um PDF na Entrada, cole o JSON ou abra o exemplo para ver o resumo e as conferências.">
-      <button type="button" class="plaque plaque--sm" @click="actions.loadDemo()">Ver o exemplo</button>
+      <button type="button" class="btn btn--sm" @click="actions.loadDemo()">Ver o exemplo</button>
     </EmptyState>
 
     <template v-else>
@@ -124,10 +122,10 @@ function seeChecks() {
       </div>
 
       <div class="sum-actions">
-        <button type="button" class="plaque plaque--sm" @click="actions.saveNow()"><Icon name="save" size="sm" />Salvar</button>
-        <button type="button" class="plaque plaque--sm" @click="actions.copySummary()"><Icon name="copy" size="sm" />Copiar resumo</button>
-        <button type="button" class="plaque plaque--sm" @click="actions.print()"><Icon name="print" size="sm" />Imprimir</button>
-        <button type="button" class="plaque plaque--sm plaque--ghost" @click="actions.newMatricula()"><Icon name="new" size="sm" />Nova</button>
+        <button type="button" class="btn btn--sm" @click="actions.saveNow()"><Icon name="save" size="sm" />Salvar</button>
+        <button type="button" class="btn btn--sm" @click="actions.copySummary()"><Icon name="copy" size="sm" />Copiar resumo</button>
+        <button type="button" class="btn btn--sm" @click="actions.print()"><Icon name="print" size="sm" />Imprimir</button>
+        <button type="button" class="btn btn--sm btn--quiet" @click="actions.newMatricula()"><Icon name="new" size="sm" />Nova</button>
       </div>
     </template>
   </Tile>
@@ -271,8 +269,17 @@ function seeChecks() {
   flex-wrap: wrap;
 }
 .sum-actions {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: var(--s2);
+}
+.sum-actions > .btn {
+  flex: 1 1 148px;
+}
+/* no desktop largo o selo de salvamento mora no cabeçalho */
+@media (min-width: 1200px) {
+  .save-chip-tile {
+    display: none;
+  }
 }
 </style>

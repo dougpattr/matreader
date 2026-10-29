@@ -34,7 +34,12 @@ export function useAppActions() {
   const ui = useUiStore();
   const modals = useModalsStore();
 
-  const goTo = (id: PanelId) => navigate(id, ui.isDesktop);
+  const goTo = (id: PanelId) => {
+    // o menu marca o destino na hora; o observador da rolagem espera a viagem acabar
+    ui.activePanel = id;
+    ui.spyPauseUntil = Date.now() + 1500;
+    return navigate(id, ui.isDesktop);
+  };
 
   async function convert(files: File[]) {
     if (!files.length) return;

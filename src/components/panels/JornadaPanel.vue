@@ -44,7 +44,7 @@ const recent = computed(() => flow.history.slice(0, 4));
       <span v-if="flow.ping.result" class="muted small">respondeu em {{ flow.ping.result.ms }} ms {{ timeAgo(flow.ping.at) }}</span>
       <button
         type="button"
-        class="plaque plaque--sm"
+        class="btn btn--sm"
         :disabled="!settings.flowConfigured || flow.ping.busy || flow.busy"
         @click="actions.testConnection()"
       >
@@ -61,7 +61,7 @@ const recent = computed(() => flow.history.slice(0, 4));
       <div class="run-row">
         <span class="mono">{{ fmtClock(flow.elapsed) }}</span>
         <span class="grow muted small">{{ flow.label }}</span>
-        <button type="button" class="plaque plaque--sm plaque--danger" @click="flow.cancel()">Cancelar</button>
+        <button type="button" class="btn btn--sm btn--danger" @click="flow.cancel()">Cancelar</button>
       </div>
     </div>
 
@@ -82,8 +82,8 @@ const recent = computed(() => flow.history.slice(0, 4));
       <div v-if="flow.extracted.ocrConfidence !== null"><dt>OCR</dt><dd>{{ flow.extracted.ocrConfidence }}% de confiança</dd></div>
     </dl>
     <div v-if="flow.lastText || flow.lastRaw" class="row">
-      <button v-if="flow.lastText" type="button" class="plaque plaque--sm plaque--ghost" @click="actions.showLastText()"><Icon name="doc" size="sm" />Texto enviado</button>
-      <button v-if="flow.lastRaw" type="button" class="plaque plaque--sm plaque--ghost" @click="actions.showLastResponse()"><Icon name="braces" size="sm" />Resposta do agente</button>
+      <button v-if="flow.lastText" type="button" class="btn btn--sm btn--quiet" @click="actions.showLastText()"><Icon name="doc" size="sm" />Texto enviado</button>
+      <button v-if="flow.lastRaw" type="button" class="btn btn--sm btn--quiet" @click="actions.showLastResponse()"><Icon name="braces" size="sm" />Resposta do agente</button>
     </div>
 
     <div v-if="recent.length" class="history">
@@ -107,7 +107,7 @@ const recent = computed(() => flow.history.slice(0, 4));
         <li :class="{ done: !!flow.ping.result }"><b>Teste</b> — "Testar conexão" responde na hora, sem gastar o agente.</li>
         <li><b>Converta</b> — solte o PDF na Entrada; o texto (ou OCR) segue a trilha acima.</li>
       </ol>
-      <button v-if="!settings.flowConfigured" type="button" class="plaque plaque--sm plaque--primary" @click="modals.settings = true">
+      <button v-if="!settings.flowConfigured" type="button" class="btn btn--sm btn--primary" @click="modals.settings = true">
         <Icon name="plug" size="sm" />Configurar o fluxo
       </button>
     </div>
@@ -170,7 +170,7 @@ const recent = computed(() => flow.history.slice(0, 4));
   gap: var(--s2);
   flex-wrap: wrap;
 }
-.status .plaque {
+.status .btn {
   margin-left: auto;
 }
 .small {

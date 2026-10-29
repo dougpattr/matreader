@@ -1,0 +1,534 @@
+/* ==========================================================================
+   MOVIMENTO — a vida pequena da interface.
+   1. Micro-movimentos dos ícones: cada ícone tem um gesto próprio (a seta
+      desce, a tampa abre, a engrenagem gira, o olho pisca) quando o
+      controle que o contém recebe o ponteiro, o foco do teclado ou o toque.
+   2. Repouso: os pictogramas dos blocos respiram devagar, cada um no seu
+      tempo; o raio do botão principal pisca de vez em quando.
+   3. Moldura viva: no hover o traço de nanquim "ferve" (três variações do
+      mesmo traço em sequência, como animação desenhada à mão) e uma faísca
+      corre pela borda.
+   Tudo some com "menos movimento" do sistema ou do próprio app (.still).
+   ========================================================================== */
+
+/* ---------- 1. ícones ---------- */
+.ink-icon,
+.ink-icon > * {
+  --ia: none;
+}
+.ink-icon > * {
+  transform-box: view-box;
+  transform-origin: 12px 12px;
+}
+
+@media (hover: hover) {
+  :where(button, a, summary, label, [role='button'], [role='option'], .ink-hover):hover :is(.ink-icon, .ink-icon > *) {
+    animation: var(--ia);
+  }
+}
+:where(button, a, summary, [role='button']):focus-visible :is(.ink-icon, .ink-icon > *),
+:where(button, a, [role='button']):active :is(.ink-icon, .ink-icon > *) {
+  animation: var(--ia);
+}
+
+/* o ícone inteiro */
+.i-bolt {
+  --ia: ink-flicker 0.7s var(--ease);
+}
+.i-doc,
+.i-file,
+.i-pages {
+  --ia: ink-lift 0.6s var(--ease);
+}
+.i-new,
+.i-expand,
+.i-target,
+.i-shield {
+  --ia: ink-pop 0.55s var(--spring);
+}
+.i-parcel,
+.i-help,
+.i-search,
+.i-sort,
+.i-sparkle {
+  --ia: ink-wiggle 0.7s var(--ease);
+}
+.i-x,
+.i-plus {
+  --ia: ink-quarter 0.45s var(--spring);
+}
+.i-minus,
+.i-save,
+.i-camera,
+.i-collapse {
+  --ia: ink-press 0.45s var(--ease);
+}
+.i-alert,
+.i-grip,
+.i-offline {
+  --ia: ink-shake 0.5s var(--ease);
+}
+.i-info,
+.i-more,
+.i-wasm,
+.i-plug {
+  --ia: ink-hop 0.55s var(--ease);
+}
+.i-moon {
+  --ia: ink-swing 0.8s var(--ease);
+}
+.i-gear,
+.i-refresh {
+  --ia: ink-turn 0.9s var(--ease-in-out);
+}
+.i-up,
+.i-arrow-up {
+  --ia: ink-nudge-u 0.45s var(--ease) 2;
+}
+.i-down,
+.i-arrow-down {
+  --ia: ink-nudge-d 0.45s var(--ease) 2;
+}
+.i-right,
+.i-arrow-right,
+.i-arrow-curve,
+.i-indent {
+  --ia: ink-nudge-r 0.45s var(--ease) 2;
+}
+.i-left,
+.i-arrow-left {
+  --ia: ink-nudge-l 0.45s var(--ease) 2;
+}
+.i-rot-ccw {
+  --ia: ink-ccw 0.6s var(--ease);
+}
+.i-rot-cw {
+  --ia: ink-cw 0.6s var(--ease);
+}
+.i-eye {
+  --ia: ink-blink 0.5s var(--ease);
+}
+.i-link {
+  --ia: ink-tilt 0.6s var(--ease);
+}
+
+/* só uma parte do ícone (marcadas no sprite com .a / .b) */
+.i-check .a,
+.i-offline .a {
+  stroke-dasharray: 1;
+  --ia: ink-draw 0.5s var(--ease);
+}
+.i-archive .a,
+.i-layers .a {
+  --ia: ink-lid-up 0.6s var(--ease);
+}
+.i-braces .a {
+  --ia: ink-nudge-l 0.55s var(--ease);
+}
+.i-braces .b {
+  --ia: ink-nudge-r 0.55s var(--ease);
+}
+.i-gauge .a {
+  transform-origin: 12px 18.3px;
+  --ia: ink-needle 0.9s var(--ease);
+}
+.i-print .a {
+  --ia: ink-nudge-d 0.7s var(--ease);
+}
+.i-sun .a {
+  --ia: ink-quarter 0.8s var(--ease);
+}
+.i-copy .a {
+  --ia: ink-shift 0.55s var(--ease);
+}
+.i-download .a {
+  --ia: ink-nudge-d 0.45s var(--ease) 2;
+}
+.i-upload .a {
+  --ia: ink-nudge-u 0.45s var(--ease) 2;
+}
+.i-globe .a {
+  --ia: ink-globe 0.9s var(--ease-in-out);
+}
+.i-trash .a {
+  transform-origin: 4.6px 6.6px;
+  --ia: ink-lid 0.7s var(--ease);
+}
+.i-clock .a {
+  --ia: ink-turn 1s var(--ease-in-out);
+}
+.i-sparkle .b {
+  transform-origin: 18.6px 5.8px;
+  --ia: ink-twinkle 0.8s var(--ease);
+}
+
+/* girando enquanto trabalha (depois dos gatilhos: vence o hover) */
+.ink-icon.spin {
+  animation: ink-turn 0.9s linear infinite;
+}
+
+@keyframes ink-turn {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes ink-quarter {
+  to {
+    transform: rotate(90deg);
+  }
+}
+@keyframes ink-wiggle {
+  0%,
+  100% {
+    transform: rotate(0);
+  }
+  20% {
+    transform: rotate(-12deg);
+  }
+  45% {
+    transform: rotate(9deg);
+  }
+  70% {
+    transform: rotate(-4deg);
+  }
+}
+@keyframes ink-pop {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.2);
+  }
+  70% {
+    transform: scale(0.95);
+  }
+}
+@keyframes ink-press {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(0.82);
+  }
+  70% {
+    transform: scale(1.06);
+  }
+}
+@keyframes ink-hop {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  35% {
+    transform: translateY(-3px);
+  }
+  65% {
+    transform: translateY(0.5px);
+  }
+}
+@keyframes ink-lift {
+  0%,
+  100% {
+    transform: none;
+  }
+  40% {
+    transform: translateY(-2.5px) rotate(-7deg);
+  }
+}
+@keyframes ink-nudge-u {
+  50% {
+    transform: translateY(-2.5px);
+  }
+}
+@keyframes ink-nudge-d {
+  50% {
+    transform: translateY(2.5px);
+  }
+}
+@keyframes ink-nudge-r {
+  50% {
+    transform: translateX(2.5px);
+  }
+}
+@keyframes ink-nudge-l {
+  50% {
+    transform: translateX(-2.5px);
+  }
+}
+@keyframes ink-blink {
+  0%,
+  100% {
+    transform: scaleY(1);
+  }
+  40% {
+    transform: scaleY(0.12);
+  }
+  60% {
+    transform: scaleY(1);
+  }
+}
+@keyframes ink-swing {
+  0%,
+  100% {
+    transform: rotate(0);
+  }
+  30% {
+    transform: rotate(-20deg);
+  }
+  65% {
+    transform: rotate(8deg);
+  }
+}
+@keyframes ink-tilt {
+  50% {
+    transform: rotate(-22deg);
+  }
+}
+@keyframes ink-ccw {
+  50% {
+    transform: rotate(-45deg);
+  }
+}
+@keyframes ink-cw {
+  50% {
+    transform: rotate(45deg);
+  }
+}
+@keyframes ink-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-2px);
+  }
+  40% {
+    transform: translateX(2px);
+  }
+  60% {
+    transform: translateX(-1.5px);
+  }
+  80% {
+    transform: translateX(1px);
+  }
+}
+@keyframes ink-flicker {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  15% {
+    opacity: 0.3;
+  }
+  25% {
+    opacity: 1;
+    transform: scale(1.14);
+  }
+  40% {
+    opacity: 0.55;
+  }
+  55% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@keyframes ink-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes ink-lid-up {
+  40% {
+    transform: translateY(-2.5px);
+  }
+}
+@keyframes ink-lid {
+  40% {
+    transform: translateY(-1px) rotate(-16deg);
+  }
+}
+@keyframes ink-needle {
+  0%,
+  100% {
+    transform: rotate(0);
+  }
+  35% {
+    transform: rotate(-70deg);
+  }
+  70% {
+    transform: rotate(12deg);
+  }
+}
+@keyframes ink-shift {
+  50% {
+    transform: translate(-2px, -2px);
+  }
+}
+@keyframes ink-globe {
+  50% {
+    transform: scaleX(-1);
+  }
+}
+@keyframes ink-twinkle {
+  0%,
+  100% {
+    transform: scale(1) rotate(0);
+  }
+  40% {
+    transform: scale(0.3) rotate(60deg);
+  }
+  70% {
+    transform: scale(1.3) rotate(90deg);
+  }
+}
+
+/* ---------- 2. repouso ---------- */
+.tile-picto .picto {
+  transform-origin: 50% 85%;
+  animation: ink-breathe 7s var(--ease-in-out) infinite;
+  animation-delay: calc(var(--i, 0) * -1.1s);
+}
+@keyframes ink-breathe {
+  0%,
+  100% {
+    transform: rotate(-4deg) translateY(0);
+  }
+  50% {
+    transform: rotate(4deg) translateY(-1.5px);
+  }
+}
+.btn .i-bolt.idle {
+  animation: ink-flicker-idle 7s var(--ease) 2.5s infinite;
+}
+@keyframes ink-flicker-idle {
+  0%,
+  9%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  2% {
+    opacity: 0.3;
+  }
+  3.5% {
+    opacity: 1;
+    transform: scale(1.18);
+  }
+  5.5% {
+    opacity: 0.6;
+  }
+  7% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ---------- 3. moldura viva (InkFrame com live) ---------- */
+/* path. vence o .f1 do próprio InkFrame (que já define a opacidade do traço) */
+.ink-frame path:is(.v1, .v2, .spark) {
+  opacity: 0;
+}
+.ink-frame .spark {
+  stroke: var(--spark-color, var(--accent, var(--slate)));
+  stroke-width: 2.4;
+  stroke-dasharray: 46 954;
+  transition: opacity var(--d2) var(--ease);
+}
+@media (hover: hover) {
+  .live-frame:hover > .ink-frame .v0 {
+    animation: ink-boil-0 0.48s steps(1, end) infinite;
+  }
+  .live-frame:hover > .ink-frame .v1 {
+    animation: ink-boil-1 0.48s steps(1, end) infinite;
+  }
+  .live-frame:hover > .ink-frame .v2 {
+    animation: ink-boil-2 0.48s steps(1, end) infinite;
+  }
+  .live-frame:hover > .ink-frame .spark {
+    opacity: 0.95;
+    animation: ink-spark 5.5s linear infinite;
+  }
+}
+/* chegada: a moldura ferve mais rápido, na cor do bloco, e a faísca dá a volta */
+.live-frame.arriving > .ink-frame {
+  --frame-color: var(--accent);
+}
+.live-frame.arriving > .ink-frame .v0 {
+  animation: ink-boil-0 0.3s steps(1, end) infinite;
+}
+.live-frame.arriving > .ink-frame .v1 {
+  animation: ink-boil-1 0.3s steps(1, end) infinite;
+}
+.live-frame.arriving > .ink-frame .v2 {
+  animation: ink-boil-2 0.3s steps(1, end) infinite;
+}
+.live-frame.arriving > .ink-frame :is(.v0, .v1, .v2) {
+  stroke-width: 2.2;
+}
+.live-frame.arriving > .ink-frame .spark {
+  opacity: 1;
+  stroke-width: 3.2;
+  stroke-dasharray: 220 780;
+  animation: ink-spark 1.4s var(--ease-in-out) 1 forwards;
+}
+@keyframes ink-boil-0 {
+  0% {
+    opacity: 0.85;
+  }
+  33.33%,
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes ink-boil-1 {
+  0% {
+    opacity: 0;
+  }
+  33.33% {
+    opacity: 0.85;
+  }
+  66.66%,
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes ink-boil-2 {
+  0%,
+  33.33% {
+    opacity: 0;
+  }
+  66.66%,
+  100% {
+    opacity: 0.85;
+  }
+}
+@keyframes ink-spark {
+  from {
+    stroke-dashoffset: 0;
+  }
+  to {
+    stroke-dashoffset: -1000;
+  }
+}
+
+/* ---------- sem movimento: o traço fica parado e inteiro ---------- */
+:root.still .ink-frame :is(.v0, .v1, .v2, .spark) {
+  animation: none !important;
+}
+:root.still .ink-frame .spark {
+  display: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ink-frame :is(.v0, .v1, .v2, .spark) {
+    animation: none !important;
+  }
+  .ink-frame .spark {
+    display: none;
+  }
+}

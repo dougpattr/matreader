@@ -83,42 +83,65 @@ const C = 2 * Math.PI * 15;
 </template>
 
 <style scoped>
+/* mesma família dos botões (pílula, contorno, altura sm); o anel de tinta
+   à esquerda enche enquanto o botão é segurado */
 .hold {
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  min-height: 36px;
-  padding: 0 12px 0 4px;
-  border-radius: 999px;
-  border: 1px solid transparent;
-  background: transparent;
+  min-height: var(--h-sm);
+  padding: 0 16px 0 4px;
+  border-radius: var(--r-pill);
+  border: var(--edge) solid var(--ink-stroke);
+  background: var(--paper-2);
   color: var(--ink-2);
   font: 600 12.5px/1 var(--f-ui);
   cursor: pointer;
   user-select: none;
   touch-action: none;
   -webkit-tap-highlight-color: transparent;
-  transition: background-color var(--d1) var(--ease), color var(--d1) var(--ease);
+  transition:
+    background-color var(--d2) var(--ease),
+    color var(--d1) var(--ease),
+    transform var(--d1) var(--ease);
 }
-.hold.compact {
-  padding: 0 2px;
+.hold.danger {
+  border-color: var(--bad);
+  color: var(--bad);
 }
 .hold:hover {
   background: var(--paper-3);
 }
-.hold.danger {
-  color: var(--bad);
-}
 .hold.danger:hover,
 .hold.is-holding {
+  background: var(--bad-soft);
+}
+.hold.is-holding {
+  transform: scale(0.98);
+}
+.hold:focus-visible {
+  outline: 2px solid var(--slate-2);
+  outline-offset: 3px;
+  border-radius: var(--r-pill);
+}
+.hold.compact {
+  justify-content: center;
+  width: var(--h-sm);
+  padding: 0;
+  border-color: transparent;
+  background: transparent;
+}
+.hold.compact:hover,
+.hold.compact.is-holding {
   background: var(--bad-soft);
 }
 .hold-ring {
   position: relative;
   display: grid;
   place-items: center;
-  width: 32px;
-  height: 32px;
+  width: 26px;
+  height: 26px;
 }
 .hold-ring svg {
   position: absolute;
@@ -127,21 +150,20 @@ const C = 2 * Math.PI * 15;
 }
 .track {
   fill: none;
-  stroke: var(--line-2);
+  stroke: color-mix(in srgb, currentColor 25%, transparent);
   stroke-width: 2;
 }
 .fill {
   fill: none;
   stroke: currentColor;
-  stroke-width: 2.6;
+  stroke-width: 2.8;
   stroke-linecap: round;
 }
-.is-holding .hold-ring {
-  transform: scale(1.06);
+.hold-ring .ink-icon {
+  width: 14px;
+  height: 14px;
 }
-@media (pointer: coarse) {
-  .hold {
-    min-height: 44px;
-  }
+.is-holding .hold-ring {
+  transform: scale(1.08);
 }
 </style>

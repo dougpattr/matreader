@@ -79,13 +79,20 @@
   --gutter: 16px;
   --tile-pad: 16px;
 
-  /* forma */
-  --r-sm: 6px;
-  --r-md: 10px;
+  /* forma — regra da casa: o que se clica é pílula, o que guarda é cartão */
+  --r-sm: 8px;
+  --r-md: 12px;
   --r-lg: 16px;
-  --r-plaque: 5px 5px 22px 22px;
+  --r-card: 18px;
+  --r-pill: 999px;
   --r-arch: 999px 999px 18px 18px;
   --stroke: 1.6px;
+  --edge: 1.5px;
+
+  /* controles: três alturas para tudo alinhar na mesma linha */
+  --h-sm: 34px;
+  --h-md: 42px;
+  --h-lg: 52px;
 
   /* sombra de papel */
   --shadow-lift: 0 1px 0 rgba(30, 28, 36, 0.05), 0 16px 32px -22px rgba(30, 28, 36, 0.45);
@@ -100,8 +107,15 @@
   --d3: 480ms;
   --d4: 820ms;
 
-  --header-h: 64px;
-  --tabbar-h: 64px;
+  /* ilhas flutuantes (cabeçalho e, no celular, a barra de abas) */
+  --header-h: 60px;
+  --tabbar-h: 62px;
+  --float-gap: 14px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --float-top: calc(var(--safe-top) + var(--float-gap) + var(--header-h) + var(--float-gap));
+  --float-bottom: calc(var(--safe-bottom) + var(--float-gap) + var(--tabbar-h) + var(--float-gap));
+  --glass: color-mix(in srgb, var(--paper-2) 82%, transparent);
 }
 
 :root.theme-noite {
@@ -148,7 +162,14 @@
 @media (max-width: 991px) {
   :root {
     --gutter: 12px;
-    --tile-pad: 14px;
-    --header-h: 56px;
+    --tile-pad: 16px;
+    --header-h: 54px;
+    --float-gap: 10px;
+  }
+}
+@media (pointer: coarse) {
+  :root {
+    --h-sm: 40px;
+    --h-md: 44px;
   }
 }

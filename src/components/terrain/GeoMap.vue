@@ -342,7 +342,7 @@ defineExpose({ invalidate: () => map.value?.invalidateSize() });
       <form class="map-search" role="search" @submit.prevent="search">
         <Icon name="search" size="sm" />
         <input v-model="query" class="map-input" type="search" placeholder="Buscar endereço, cidade ou fazenda" aria-label="Buscar endereço no mapa" />
-        <button type="submit" class="plaque plaque--sm plaque--primary" :disabled="searching">{{ searching ? '…' : 'Buscar' }}</button>
+        <button type="submit" class="btn btn--sm btn--primary" :disabled="searching">{{ searching ? '…' : 'Buscar' }}</button>
       </form>
       <div v-if="results" class="map-results" role="listbox" aria-label="Resultados da busca">
         <p v-if="!results.length" class="muted">Nada encontrado.</p>
@@ -357,10 +357,10 @@ defineExpose({ invalidate: () => map.value?.invalidateSize() });
         <Icon name="layers" size="sm" />
       </button>
       <div v-if="layersOpen" class="layers-menu">
-        <button v-for="b in (['hd', 'sat', 'ruas'] as const)" :key="b" type="button" class="plaque plaque--sm" :class="{ 'plaque--primary': base === b }" @click="setBase(b)">
+        <button v-for="b in (['hd', 'sat', 'ruas'] as const)" :key="b" type="button" class="btn btn--sm" :class="{ 'is-on': base === b }" :aria-pressed="base === b" @click="setBase(b)">
           {{ b === 'hd' ? 'Satélite HD' : b === 'sat' ? 'Satélite' : 'Ruas' }}
         </button>
-        <button type="button" class="plaque plaque--sm" :class="{ 'plaque--primary': labelsOn }" @click="toggleLabels">Nomes e limites</button>
+        <button type="button" class="btn btn--sm" :class="{ 'is-on': labelsOn }" :aria-pressed="labelsOn" @click="toggleLabels">Nomes e limites</button>
       </div>
     </div>
   </div>
@@ -468,7 +468,7 @@ defineExpose({ invalidate: () => map.value?.invalidateSize() });
   box-shadow: 0 0 0 1.4px var(--ink-stroke), var(--shadow-lift);
   min-width: 168px;
 }
-.layers-menu .plaque {
+.layers-menu .btn {
   width: 100%;
 }
 </style>

@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { IonButton, IonButtons, IonContent, IonHeader, IonModal, IonTitle, IonToolbar } from '@ionic/vue';
 import Icon from '@/components/ink/Icon.vue';
+import InkSheet from '@/components/ink/InkSheet.vue';
 import Picto from '@/components/ink/Picto.vue';
 import { useModalsStore } from '@/stores/modals';
 
@@ -8,22 +8,13 @@ const modals = useModalsStore();
 </script>
 
 <template>
-  <ion-modal class="ink-modal" :is-open="modals.help" @did-dismiss="modals.help = false">
-    <ion-header>
-      <ion-toolbar>
-        <ion-title>Como usar</ion-title>
-        <ion-buttons slot="end">
-          <ion-button aria-label="Fechar" @click="modals.help = false"><Icon name="x" /></ion-button>
-        </ion-buttons>
-      </ion-toolbar>
-    </ion-header>
-    <ion-content class="ion-padding">
+  <InkSheet :open="modals.help" title="Como usar" sub="Da matrícula em PDF ao documento conferido e ao terreno no mapa." picto="feather" narrow @close="modals.help = false">
       <div class="help">
         <p class="lead">O MatReader transforma a matrícula do imóvel em documento conferido, desenha o terreno sobre o satélite e junta arquivos. Funciona offline e cabe no bolso.</p>
 
         <h3><Picto name="feather" :size="26" />1 · Trazer a matrícula</h3>
         <ul>
-          <li><b>Arraste o PDF ou as fotos</b> na janela em arco (ou toque em <b>Converter com IA</b>). No celular, <b>Fotografar</b> abre a câmera.</li>
+          <li><b>Arraste o PDF ou as fotos</b> na paisagem da Entrada (ou toque em <b>Converter com IA</b>). No celular, <b>Fotografar</b> abre a câmera.</li>
           <li>O app lê o texto do PDF — ou faz <b>OCR no próprio aparelho</b> nas páginas digitalizadas — e envia só o texto ao seu fluxo do Power Automate, onde o agente do Copilot Studio devolve o JSON.</li>
           <li>Sem fluxo? <b>Copiar prompt</b>, cole numa IA com o arquivo e traga a resposta com <b>Colar JSON</b>.</li>
         </ul>
@@ -50,15 +41,12 @@ const modals = useModalsStore();
         <h3><Icon name="shield" size="sm" />O que sai do aparelho</h3>
         <p>Só o <b>texto da matrícula</b> (para o seu fluxo), as <b>imagens de satélite</b> e a <b>busca de endereço</b>. Documento, OCR, acervo, PDFs e impressão acontecem aqui dentro.</p>
       </div>
-    </ion-content>
-  </ion-modal>
+  </InkSheet>
 </template>
-
 <style scoped>
 .help {
   display: grid;
   gap: var(--s2);
-  padding-bottom: var(--s6);
   font-size: 14px;
   line-height: 1.6;
   color: var(--ink-2);

@@ -33,6 +33,8 @@ export const useUiStore = defineStore('ui', () => {
   const dragging = ref(false);
   const focusPanel = ref<PanelId | null>(null);
   const activePanel = ref<PanelId>('entrada');
+  /** durante um pulo pelo menu o observador de rolagem não troca o bloco ativo */
+  const spyPauseUntil = ref(0);
   const pwaUpdate = ref<null | (() => Promise<void>)>(null);
   const kernel = ref<'wasm' | 'ts'>('ts');
 
@@ -59,5 +61,5 @@ export const useUiStore = defineStore('ui', () => {
     settings.theme = dark.value ? 'claro' : 'escuro';
   }
 
-  return { isDesktop, dark, still, online, dragging, focusPanel, activePanel, pwaUpdate, kernel, toggleTheme };
+  return { isDesktop, dark, still, online, dragging, focusPanel, activePanel, spyPauseUntil, pwaUpdate, kernel, toggleTheme };
 });

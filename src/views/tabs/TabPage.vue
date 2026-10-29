@@ -21,7 +21,8 @@ defineProps<{ title: string; full?: boolean }>();
 .tab-stack {
   display: grid;
   gap: var(--gutter);
-  padding: var(--gutter) var(--gutter) calc(var(--gutter) * 2);
+  /* cabeçalho e barra de abas flutuam: o conteúdo respira entre os dois */
+  padding: calc(var(--float-top) + 4px) var(--gutter) calc(var(--float-bottom) + var(--s3));
   max-width: 820px;
   margin: 0 auto;
 }

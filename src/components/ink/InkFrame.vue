@@ -2,20 +2,25 @@
 /* Moldura de nanquim desenhada à mão: um retângulo arredondado com leve
    tremor, gerado por semente (fica igual a cada redesenho) e refeito
    quando o elemento muda de tamanho. Dois traços sobrepostos dão o
-   aspecto de pena. Puramente decorativo (aria-hidden). */
+   aspecto de pena. Com live, ganha mais duas variações do traço principal
+   e uma faísca: o pai com .live-frame faz o traço "ferver" e a faísca
+   correr pela borda no hover (motion.css). Puramente decorativo. */
 import { onBeforeUnmount, onMounted, ref } from 'vue';
 import { hashString, seeded } from '@/core/browser';
 
-const props = withDefaults(defineProps<{ seed?: string; radius?: number; jitter?: number; draw?: boolean }>(), {
+const props = withDefaults(defineProps<{ seed?: string; radius?: number; jitter?: number; draw?: boolean; live?: boolean }>(), {
   seed: 'frame',
   radius: 12,
   jitter: 1.1,
   draw: false,
+  live: false,
 });
 
 const host = ref<SVGSVGElement | null>(null);
 const d1 = ref('');
 const d2 = ref('');
+const b1 = ref('');
+const b2 = ref('');
 const size = ref({ w: 0, h: 0 });
 const drawn = ref(!props.draw);
 let ro: ResizeObserver | null = null;
@@ -96,6 +101,10 @@ function redraw() {
   const s = hashString(props.seed);
   d1.value = wobble(w, h, s, props.jitter);
   d2.value = wobble(w, h, s ^ 0x9e3779b9, props.jitter * 1.3);
+  if (props.live) {
+    b1.value = wobble(w, h, s ^ 0x85ebca6b, props.jitter * 1.25);
+    b2.value = wobble(w, h, s ^ 0xc2b2ae35, props.jitter * 1.25);
+  }
 }
 
 onMounted(() => {
@@ -126,8 +135,13 @@ onBeforeUnmount(() => {
     aria-hidden="true"
     focusable="false"
   >
-    <path class="f1" pathLength="1000" :d="d1" />
+    <path class="f1 v0" pathLength="1000" :d="d1" />
+    <template v-if="live">
+      <path class="f1 v1" :d="b1" />
+      <path class="f1 v2" :d="b2" />
+    </template>
     <path class="f2" pathLength="1000" :d="d2" />
+    <path v-if="live" class="spark" pathLength="1000" :d="d1" />
   </svg>
 </template>
 
@@ -153,12 +167,12 @@ onBeforeUnmount(() => {
   stroke-width: 0.8;
   opacity: 0.35;
 }
-.will-draw path {
+.will-draw :is(.v0, .f2) {
   stroke-dasharray: 1000;
   stroke-dashoffset: 1000;
   transition: stroke-dashoffset 1.3s var(--ease);
 }
-.will-draw.is-drawn path {
+.will-draw.is-drawn :is(.v0, .f2) {
   stroke-dashoffset: 0;
 }
 .will-draw.is-drawn .f2 {

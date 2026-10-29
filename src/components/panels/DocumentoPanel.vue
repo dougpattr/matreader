@@ -127,7 +127,7 @@ function toggleSearch() {
     </template>
 
     <EmptyState v-if="!rendered" picto="scroll" title="O documento aparece aqui" text="Converta um PDF na Entrada, cole o JSON da IA ou abra o exemplo.">
-      <button type="button" class="plaque plaque--sm" @click="actions.loadDemo()">Abrir o exemplo</button>
+      <button type="button" class="btn btn--sm" @click="actions.loadDemo()">Abrir o exemplo</button>
     </EmptyState>
 
     <template v-else>

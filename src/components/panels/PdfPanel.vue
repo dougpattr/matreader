@@ -45,7 +45,7 @@ function clearAll() {
     <div class="drop" :class="{ over }" v-bind="bind" data-cursor="Solte para juntar">
       <Icon name="arrow-down" />
       <span>Arraste PDFs e imagens aqui — pode misturar</span>
-      <button type="button" class="plaque plaque--sm" @click="actions.addToQueuePicker()">Escolher arquivos</button>
+      <button type="button" class="btn btn--sm" @click="actions.addToQueuePicker()">Escolher arquivos</button>
     </div>
 
     <ion-list v-if="queue.items.length" class="rows" lines="none">
@@ -86,8 +86,8 @@ function clearAll() {
         <template v-if="queue.totals.count">{{ queue.totals.count }} arquivo(s) · {{ queue.totals.pages }}{{ queue.totals.unknown ? '+' : '' }} pág. · {{ fmtBytes(queue.totals.bytes) }}</template>
         <template v-else>Nenhum arquivo na fila</template>
       </span>
-      <button type="button" class="plaque plaque--sm foot-btn" :disabled="!queue.items.length || flow.busy" @click="actions.convert(queue.files())"><Icon name="bolt" size="sm" />Converter com IA</button>
-      <button type="button" class="plaque plaque--sm plaque--primary foot-btn" :disabled="!queue.items.length || queue.busy" @click="actions.generatePdf()">
+      <button type="button" class="btn btn--sm foot-btn" :disabled="!queue.items.length || flow.busy" @click="actions.convert(queue.files())"><Icon name="bolt" size="sm" />Converter com IA</button>
+      <button type="button" class="btn btn--sm btn--primary foot-btn" :disabled="!queue.items.length || queue.busy" @click="actions.generatePdf()">
         {{ queue.busy ? 'Processando…' : settings.removeLinks ? 'Gerar PDF limpo' : 'Gerar PDF' }}
       </button>
     </template>

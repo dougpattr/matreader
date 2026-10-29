@@ -1,0 +1,448 @@
+/* ==========================================================================
+   CONTROLES — um sistema só para botão, botão de ícone, campo, seletor,
+   segmento e interruptor.
+   Regra da casa: o que se clica é pílula com contorno de nanquim e um fio
+   interno (o "selo" gravado); o que guarda conteúdo é cartão. Três alturas
+   (34 · 42 · 52 px; 40 · 44 · 52 no toque) para tudo alinhar na mesma linha.
+   No hover, a tinta enche o botão da esquerda para a direita e sai pela
+   direita — o gesto de passar o pincel.
+   ========================================================================== */
+
+/* ---------- botão ---------- */
+.btn {
+  --b-h: var(--h-md);
+  --b-px: 18px;
+  --b-fs: 13px;
+  --b-bg: var(--paper-2);
+  --b-fg: var(--ink);
+  --b-edge: var(--ink-stroke);
+  --b-ring: var(--line-2);
+  --b-fill: var(--paper-3);
+  --b-fill-fg: var(--b-fg);
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: var(--b-h);
+  min-width: 0;
+  padding: 0 var(--b-px);
+  border: var(--edge) solid var(--b-edge);
+  border-radius: var(--r-pill);
+  background: var(--b-bg);
+  color: var(--b-fg);
+  font: 600 var(--b-fs) / 1.1 var(--f-ui);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
+  user-select: none;
+  transition:
+    color var(--d2) var(--ease),
+    border-color var(--d2) var(--ease),
+    background-color var(--d2) var(--ease),
+    transform var(--d1) var(--ease);
+  -webkit-tap-highlight-color: transparent;
+}
+/* a tinta que enche */
+.btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: var(--b-fill);
+  transform: scaleX(0);
+  transform-origin: right center;
+  transition: transform var(--d3) var(--ease);
+}
+/* o fio interno gravado */
+.btn::after {
+  content: '';
+  position: absolute;
+  inset: 2.5px;
+  border-radius: inherit;
+  border: 1px solid var(--b-ring);
+  pointer-events: none;
+  transition:
+    inset var(--d2) var(--ease),
+    border-color var(--d2) var(--ease);
+}
+@media (hover: hover) {
+  .btn:hover:not(:disabled)::before {
+    transform: scaleX(1);
+    transform-origin: left center;
+  }
+  .btn:hover:not(:disabled) {
+    color: var(--b-fill-fg);
+  }
+  .btn:hover:not(:disabled)::after {
+    inset: 3.5px;
+  }
+}
+.btn:active:not(:disabled) {
+  transform: translateY(1px) scale(0.985);
+}
+.btn:focus-visible {
+  outline: 2px solid var(--slate-2);
+  outline-offset: 3px;
+  border-radius: var(--r-pill);
+}
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.btn > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.btn .ink-icon {
+  width: 18px;
+  height: 18px;
+}
+
+/* tamanhos */
+.btn--sm {
+  --b-h: var(--h-sm);
+  --b-px: 14px;
+  --b-fs: 12.5px;
+  gap: 6px;
+}
+.btn--sm .ink-icon {
+  width: 16px;
+  height: 16px;
+}
+.btn--sm::after {
+  inset: 2px;
+}
+.btn--lg {
+  --b-h: var(--h-lg);
+  --b-px: 26px;
+  --b-fs: 14.5px;
+  gap: 10px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+.btn--lg .ink-icon {
+  width: 20px;
+  height: 20px;
+}
+.btn--block {
+  display: flex;
+  width: 100%;
+}
+
+/* variantes */
+.btn--primary {
+  --b-bg: var(--slate);
+  --b-fg: var(--on-slate);
+  --b-ring: color-mix(in srgb, var(--on-slate) 42%, transparent);
+  --b-fill: var(--slate-2);
+}
+:root.theme-noite .btn--primary {
+  --b-edge: var(--slate-2);
+  --b-fill: var(--slate-3);
+}
+.btn--accent {
+  --b-bg: var(--rose);
+  --b-fg: #2b1d1a;
+  --b-ring: rgba(43, 29, 26, 0.28);
+  --b-fill: color-mix(in srgb, var(--rose) 72%, #fff);
+}
+.btn--quiet {
+  --b-bg: transparent;
+  --b-edge: transparent;
+  --b-ring: transparent;
+  --b-fg: var(--ink-2);
+  --b-fill: var(--paper-3);
+  --b-fill-fg: var(--ink);
+}
+.btn--danger {
+  --b-fg: var(--bad);
+  --b-edge: var(--bad);
+  --b-ring: color-mix(in srgb, var(--bad) 28%, transparent);
+  --b-fill: var(--bad-soft);
+}
+/* ligado (alternâncias): a pílula fica cheia de tinta */
+.btn.is-on,
+.btn[aria-pressed='true'] {
+  --b-bg: var(--ink);
+  --b-fg: var(--paper-2);
+  --b-edge: var(--ink);
+  --b-ring: color-mix(in srgb, var(--paper-2) 34%, transparent);
+  --b-fill: var(--ink-2);
+}
+/* seta que avança no hover (o "estilo de seta" do site de referência) */
+.btn .go {
+  margin-left: 2px;
+  transition: transform var(--d3) var(--spring);
+}
+@media (hover: hover) {
+  .btn:hover:not(:disabled) .go {
+    transform: translateX(5px);
+  }
+}
+
+/* ---------- botão redondo de ícone (mesma família, mesmas alturas) ---------- */
+.ink-round {
+  --b-h: var(--h-md);
+  --b-bg: var(--paper-2);
+  --b-fg: var(--ink);
+  --b-edge: var(--ink-stroke);
+  --b-ring: var(--line-2);
+  --b-fill: var(--paper-3);
+  position: relative;
+  isolation: isolate;
+  display: inline-grid;
+  place-items: center;
+  width: var(--b-h);
+  height: var(--b-h);
+  flex: none;
+  padding: 0;
+  border-radius: 50%;
+  border: var(--edge) solid var(--b-edge);
+  background: var(--b-bg);
+  color: var(--b-fg);
+  cursor: pointer;
+  transition:
+    color var(--d2) var(--ease),
+    background-color var(--d2) var(--ease),
+    border-color var(--d2) var(--ease),
+    transform var(--d1) var(--ease);
+  -webkit-tap-highlight-color: transparent;
+}
+.ink-round::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: 50%;
+  background: var(--b-fill);
+  transform: scale(0);
+  transition: transform var(--d3) var(--spring);
+}
+.ink-round::after {
+  content: '';
+  position: absolute;
+  inset: 2.5px;
+  border-radius: 50%;
+  border: 1px solid var(--b-ring);
+  pointer-events: none;
+}
+@media (hover: hover) {
+  .ink-round:hover:not(:disabled)::before {
+    transform: scale(1);
+  }
+}
+.ink-round:active:not(:disabled) {
+  transform: translateY(1px) scale(0.95);
+}
+.ink-round:focus-visible {
+  outline: 2px solid var(--slate-2);
+  outline-offset: 3px;
+  border-radius: 50%;
+}
+.ink-round.sm {
+  --b-h: var(--h-sm);
+}
+.ink-round.sm::after {
+  inset: 2px;
+}
+.ink-round.ghost {
+  --b-bg: transparent;
+  --b-edge: transparent;
+  --b-ring: transparent;
+  --b-fg: var(--ink-2);
+}
+.ink-round[aria-pressed='true'],
+.ink-round.on {
+  --b-bg: var(--ink);
+  --b-fg: var(--paper-2);
+  --b-edge: var(--ink);
+  --b-ring: color-mix(in srgb, var(--paper-2) 34%, transparent);
+  --b-fill: var(--ink-2);
+}
+.ink-round:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ---------- campos ---------- */
+.field {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.field > label,
+.label {
+  font: 700 10.5px/1.3 var(--f-ui);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.field small,
+.hint {
+  font-size: 12px;
+  color: var(--ink-3);
+  line-height: 1.5;
+}
+.input {
+  appearance: none;
+  width: 100%;
+  min-width: 0;
+  min-height: var(--h-md);
+  padding: 0 18px;
+  border-radius: var(--r-pill);
+  border: var(--edge) solid var(--line-2);
+  background: var(--paper-3);
+  color: var(--ink);
+  font: 400 14px/1.4 var(--f-ui);
+  transition:
+    border-color var(--d1) var(--ease),
+    box-shadow var(--d2) var(--ease),
+    background-color var(--d2) var(--ease);
+}
+.input::placeholder {
+  color: var(--ink-3);
+  opacity: 0.85;
+}
+.input:hover {
+  border-color: var(--ink-3);
+}
+.input:focus {
+  outline: none;
+  border-color: var(--slate);
+  background: var(--paper-2);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--slate) 18%, transparent);
+}
+.input--sm {
+  min-height: var(--h-sm);
+  padding: 0 14px;
+  font-size: 13px;
+}
+textarea.input {
+  min-height: 120px;
+  padding: 12px 14px;
+  border-radius: var(--r-md);
+  resize: vertical;
+  font: 400 12.5px/1.55 var(--f-mono);
+}
+/* campo com ícone de lupa (busca no acervo e no mapa) */
+.search-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+.search-field > .ink-icon {
+  position: absolute;
+  left: 15px;
+  color: var(--ink-3);
+  pointer-events: none;
+  transition: color var(--d1) var(--ease);
+}
+.search-field > .input {
+  padding-left: 42px;
+}
+.search-field:focus-within > .ink-icon {
+  color: var(--slate-2);
+}
+.input[type='search']::-webkit-search-cancel-button {
+  cursor: pointer;
+}
+
+/* ---------- interruptor em cartão ---------- */
+.switch-row {
+  display: flex;
+  gap: var(--s4);
+  align-items: center;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--paper-2);
+  cursor: pointer;
+  transition:
+    border-color var(--d2) var(--ease),
+    background-color var(--d2) var(--ease);
+}
+.switch-row:hover {
+  border-color: var(--line-2);
+}
+.switch-row b {
+  display: block;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.switch-row span {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--ink-3);
+  line-height: 1.5;
+}
+.switch-row ion-toggle {
+  margin-left: auto;
+  flex: none;
+}
+
+/* ---------- linha de botões ---------- */
+.btn-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s2);
+}
+.btn-row--end {
+  justify-content: flex-end;
+}
+
+/* ---------- cartões dentro das folhas (modais) ---------- */
+.sheet-card {
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+  padding: 22px 24px 24px;
+  border-radius: var(--r-card);
+  border: 1px solid var(--line);
+  background: var(--paper);
+}
+.sheet-card-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+.sheet-card-head .mark {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--slate-soft);
+  color: var(--slate-2);
+}
+.sheet-card-head h3 {
+  margin: 0;
+  font: 700 14.5px/1.3 var(--f-ui);
+  letter-spacing: 0.01em;
+  color: var(--ink);
+}
+.sheet-card-head p {
+  margin-top: 3px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--ink-3);
+}
+.grid-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 16px;
+}
+@media (max-width: 600px) {
+  .sheet-card {
+    gap: 16px;
+    padding: 18px 16px 18px;
+  }
+}

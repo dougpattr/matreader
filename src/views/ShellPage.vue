@@ -4,6 +4,7 @@
 import { IonContent, IonPage, IonRouterOutlet, IonTabBar, IonTabButton, IonTabs, IonLabel, IonBadge } from '@ionic/vue';
 import AppHeader from '@/components/layout/AppHeader.vue';
 import DesktopWorkspace from '@/components/layout/DesktopWorkspace.vue';
+import InkFrame from '@/components/ink/InkFrame.vue';
 import Picto from '@/components/ink/Picto.vue';
 import { useFlowStore } from '@/stores/flow';
 import { useMatriculaStore } from '@/stores/matricula';
@@ -34,7 +35,9 @@ const TABS = [
     </template>
     <ion-tabs v-else>
       <ion-router-outlet />
-      <ion-tab-bar id="app-tab-bar" slot="bottom">
+      <div class="tab-fade" aria-hidden="true" />
+      <ion-tab-bar id="app-tab-bar" slot="bottom" class="live-frame">
+        <InkFrame seed="abas" :radius="24" :jitter="0.9" :draw="!ui.still" live />
         <ion-tab-button v-for="t in TABS" :key="t.tab" :tab="t.tab" :href="`/tabs/${t.tab}`">
           <Picto class="tab-ink" :name="t.picto" :size="26" />
           <ion-label>{{ t.label }}</ion-label>
@@ -46,3 +49,15 @@ const TABS = [
     </ion-tabs>
   </ion-page>
 </template>
+
+<style scoped>
+/* véu de papel sob a barra de abas: o conteúdo esmaece ao passar por baixo */
+.tab-fade {
+  position: absolute;
+  inset: auto 0 0;
+  z-index: 5;
+  height: calc(var(--float-bottom) + 8px);
+  background: linear-gradient(to top, var(--paper) 35%, color-mix(in srgb, var(--paper) 70%, transparent) 70%, transparent);
+  pointer-events: none;
+}
+</style>

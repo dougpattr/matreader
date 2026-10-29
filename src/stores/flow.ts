@@ -5,7 +5,7 @@ import { defineStore } from 'pinia';
 import { computed, ref, shallowRef } from 'vue';
 import { local, sha256Hex } from '@/core/browser';
 import { extractText, type ExtractedText } from '@/services/extract/text-extraction';
-import { convertWithFlow, FlowError, pingFlow, type PingResponse } from '@/services/flow/flow-client';
+import { awaitTask, convertWithFlow, FlowError, pingFlow, type ConvertResponse, type PingResponse, type TaskProgress } from '@/services/flow/flow-client';
 import { isSupported, mergeFiles, rasterize, stripAnnotations, toBase64 } from '@/services/pdf/pdf-service';
 import { useMatriculaStore } from './matricula';
 import { useSettingsStore } from './settings';
@@ -60,6 +60,7 @@ export interface PingState {
 }
 
 const HISTORY_KEY = 'matreader:execucoes:v1';
+const PENDING_KEY = 'matreader:tarefa-pendente';
 
 export const useFlowStore = defineStore('flow', () => {
   const settings = useSettingsStore();
@@ -189,6 +190,7 @@ export const useFlowStore = defineStore('flow', () => {
       const hash = await sha256Hex(new TextEncoder().encode(text));
       set('agente', 0.62, 'O agente está lendo a matrícula');
       waitStart = Date.now();
+      const info = { file: fileName, pages: ex.pages, method: ex.method, chars: ex.chars };
       const resp = await convertWithFlow(
         settings.flowUrl.trim(),
         {
@@ -202,30 +204,86 @@ export const useFlowStore = defineStore('flow', () => {
         },
         signal,
         Math.max(1, settings.timeoutMin) * 60_000,
+        (tarefa) => savePending({ tarefa, at: t0.value, ...info }),
+        onTaskProgress,
       );
-      settings.flowContract = resp.envelope ? 'v2' : 'v1';
-      lastRaw.value = resp.raw;
-
-      set('conferencia', 0.95, 'Conferindo e montando o documento');
-      const loaded = mat.loadText(resp.raw, { source: 'ia', meta: resp.meta ?? { metodo_texto: ex.method, ocr_confianca: ex.ocrConfidence, paginas: ex.pages } });
-      if (!loaded.ok) {
-        throw new FlowError('fluxo', 'A resposta não trouxe um JSON de matrícula que eu conseguisse ler.', loaded.message, resp.status,
-          'Abra "Ver resposta" para conferir o que o agente devolveu.');
-      }
-      progress.value = 1;
-      label.value = mat.data?.matricula.numero ? `Matrícula ${mat.data.matricula.numero} carregada` : 'Matrícula carregada';
-      end(id, true);
-      record({ file: fileName, pages: ex.pages, method: ex.method, chars: ex.chars, ms: Date.now() - t0.value, ok: true, numero: mat.data?.matricula.numero ?? null, message: 'ok' });
+      finish(id, resp, info, { metodo_texto: ex.method, ocr_confianca: ex.ocrConfidence, paginas: ex.pages });
       return true;
     } catch (e) {
-      const err = e instanceof FlowError ? e : (e as Error)?.name === 'AbortError' ? new FlowError('cancelado', 'Conversão cancelada.') : new FlowError('fluxo', String((e as Error)?.message ?? e));
-      error.value = err;
-      label.value = err.message;
-      end(id, false);
-      if (err.kind !== 'cancelado') {
-        record({ file: fileName, pages: stats?.pages ?? 0, method: stats?.method ?? '—', chars: stats?.chars ?? 0, ms: Date.now() - t0.value, ok: false, numero: null, message: err.message });
-      }
-      throw err;
+      fail(id, e, { file: fileName, pages: stats?.pages ?? 0, method: stats?.method ?? '—', chars: stats?.chars ?? 0 });
+    }
+  }
+
+  /* ---------- tarefa pendente: sobrevive a fechar o app ---------- */
+  interface Pending {
+    tarefa: string;
+    at: number;
+    file: string;
+    pages: number;
+    method: string;
+    chars: number;
+  }
+  const savePending = (p: Pending) => local.setJson(PENDING_KEY, p);
+  const clearPending = () => local.del(PENDING_KEY);
+  const pendingTask = ref<Pending | null>(local.json<Pending | null>(PENDING_KEY, null));
+
+  function onTaskProgress(p: TaskProgress) {
+    const min = Math.floor((Date.now() - p.desde) / 60000);
+    label.value = `O agente está trabalhando${min ? ` há ${min} min` : ''} · consulta ${p.consultas}`;
+  }
+
+  function finish(id: number, resp: ConvertResponse, info: Omit<Pending, 'tarefa' | 'at'>, fallbackMeta: Record<string, unknown>) {
+    clearPending();
+    pendingTask.value = null;
+    settings.flowContract = resp.envelope ? 'v2' : 'v1';
+    lastRaw.value = resp.raw;
+    set('conferencia', 0.95, 'Conferindo e montando o documento');
+    const loaded = mat.loadText(resp.raw, { source: 'ia', meta: resp.meta ?? fallbackMeta });
+    if (!loaded.ok) {
+      throw new FlowError('fluxo', 'A resposta não trouxe um JSON de matrícula que eu conseguisse ler.', loaded.message, resp.status,
+        'Abra "Resposta do agente" para conferir o que ele devolveu.');
+    }
+    progress.value = 1;
+    label.value = mat.data?.matricula.numero ? `Matrícula ${mat.data.matricula.numero} carregada` : 'Matrícula carregada';
+    end(id, true);
+    record({ ...info, ms: Date.now() - t0.value, ok: true, numero: mat.data?.matricula.numero ?? null, message: 'ok' });
+  }
+
+  function fail(id: number, e: unknown, info: Omit<Pending, 'tarefa' | 'at'>): never {
+    const err = e instanceof FlowError ? e : (e as Error)?.name === 'AbortError' ? new FlowError('cancelado', 'Conversão cancelada.') : new FlowError('fluxo', String((e as Error)?.message ?? e));
+    // tempo esgotado no app: a tarefa segue no fluxo e pode ser retomada
+    if (err.kind !== 'tempo') {
+      clearPending();
+      pendingTask.value = null;
+    }
+    error.value = err;
+    label.value = err.message;
+    end(id, false);
+    if (err.kind !== 'cancelado') record({ ...info, ms: Date.now() - t0.value, ok: false, numero: null, message: err.message });
+    throw err;
+  }
+
+  /** Retoma a tarefa que ficou no fluxo (app fechado ou tempo-limite). */
+  async function resumePending(): Promise<boolean> {
+    const p = local.json<Pending | null>(PENDING_KEY, null);
+    if (!p || busy.value) return false;
+    if (Date.now() - p.at > 45 * 60_000 || !settings.flowConfigured) {
+      clearPending();
+      pendingTask.value = null;
+      return false;
+    }
+    const id = begin();
+    t0.value = p.at;
+    const signal = controller!.signal;
+    const info = { file: p.file, pages: p.pages, method: p.method, chars: p.chars };
+    try {
+      set('agente', 0.7, 'Retomando a tarefa que ficou no fluxo');
+      waitStart = Date.now();
+      const resp = await awaitTask(settings.flowUrl.trim(), p.tarefa, signal, Date.now() + Math.max(1, settings.timeoutMin) * 60_000, onTaskProgress, p.at);
+      finish(id, resp, info, { metodo_texto: p.method, paginas: p.pages });
+      return true;
+    } catch (e) {
+      fail(id, e, info);
     }
   }
 
@@ -249,7 +307,7 @@ export const useFlowStore = defineStore('flow', () => {
   }
 
   return {
-    busy, stage, stageIndex, progress, label, phrase, elapsed, outcome, error, extracted, lastText, lastRaw, history, ping,
-    convert, cancel, dismiss, testConnection, clearHistory,
+    busy, stage, stageIndex, progress, label, phrase, elapsed, outcome, error, extracted, lastText, lastRaw, history, ping, pendingTask,
+    convert, cancel, dismiss, testConnection, clearHistory, resumePending,
   };
 });

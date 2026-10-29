@@ -2,12 +2,14 @@
 /* Acervo: toda matrícula com número fica guardada neste aparelho, com
    selo de estado, busca, ordenação, backup e planilha. No celular, deslize
    a linha para apagar; no desktop, segure a lixeira. */
-import { IonItem, IonItemOption, IonItemOptions, IonItemSliding, IonList, IonSearchbar, IonSegment, IonSegmentButton, IonSelect, IonSelectOption } from '@ionic/vue';
+import { IonItem, IonItemOption, IonItemOptions, IonItemSliding, IonList, IonSegment, IonSegmentButton } from '@ionic/vue';
 import { computed } from 'vue';
 import { useAppActions } from '@/app/actions';
 import EmptyState from '@/components/ink/EmptyState.vue';
 import HoldButton from '@/components/ink/HoldButton.vue';
 import Icon from '@/components/ink/Icon.vue';
+import InkSelect from '@/components/ink/InkSelect.vue';
+import type { InkOption } from '@/components/ink/ink-select';
 import Tile from '@/components/ink/Tile.vue';
 import { toast } from '@/composables/useToast';
 import { pickFiles, ACCEPT_JSON } from '@/composables/useFilePicker';
@@ -27,6 +29,11 @@ const BADGE: Record<string, { cls: string; text: string }> = {
   rascunho: { cls: 'chip--warn', text: 'rascunho' },
   sem: { cls: 'chip--mute', text: 'sem polígono' },
 };
+const SORTS: InkOption<LibrarySort>[] = [
+  { value: 'recentes', label: 'Recentes' },
+  { value: 'numero', label: 'Número' },
+  { value: 'comarca', label: 'Comarca' },
+];
 const sub = computed(() => (lib.records.length ? `${lib.records.length} neste aparelho` : 'salva sozinha, neste aparelho'));
 
 function open(r: LibraryRecord) {
@@ -68,13 +75,10 @@ function csv() {
       <button type="button" class="ink-round sm ghost" aria-label="Restaurar backup" title="Restaurar um backup" @click="restore"><Icon name="upload" size="sm" /></button>
     </template>
 
-    <ion-searchbar
-      :value="lib.query"
-      placeholder="Número, nome, comarca, CPF/CNPJ, CAR…"
-      :debounce="150"
-      aria-label="Buscar no acervo"
-      @ion-input="lib.query = String($event.detail.value ?? '')"
-    />
+    <label class="search-field">
+      <Icon name="search" size="sm" />
+      <input v-model="lib.query" class="input" type="search" placeholder="Número, nome, comarca, CPF…" aria-label="Buscar no acervo" />
+    </label>
     <div class="filters">
       <ion-segment :value="lib.filter" scrollable aria-label="Filtrar por estado" @ion-change="lib.filter = $event.detail.value as LibraryFilter">
         <ion-segment-button value="todas">Todas {{ lib.counts.todas }}</ion-segment-button>
@@ -82,11 +86,7 @@ function csv() {
         <ion-segment-button value="rascunho">Rascunho {{ lib.counts.rascunho }}</ion-segment-button>
         <ion-segment-button value="sem">Sem polígono {{ lib.counts.sem }}</ion-segment-button>
       </ion-segment>
-      <ion-select :value="lib.sort" interface="popover" aria-label="Ordenar" class="sort" @ion-change="lib.sort = $event.detail.value as LibrarySort">
-        <ion-select-option value="recentes">Recentes</ion-select-option>
-        <ion-select-option value="numero">Número</ion-select-option>
-        <ion-select-option value="comarca">Comarca</ion-select-option>
-      </ion-select>
+      <InkSelect v-model="lib.sort" :options="SORTS" label="Ordenar o acervo" size="sm" class="sort" />
     </div>
 
     <EmptyState
@@ -114,30 +114,28 @@ function csv() {
 </template>
 
 <style scoped>
-ion-searchbar {
-  --background: var(--paper-3);
-}
+/* filtros e ordenação na mesma linha quando cabem; no celular a ordenação
+   desce e fica à direita, e o segmento usa a largura toda */
 .filters {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--s2);
   min-width: 0;
 }
 .filters ion-segment {
-  flex: 1;
+  flex: 1 1 260px;
   min-width: 0;
 }
 .filters ion-segment-button {
   min-width: max-content;
   font-size: 10.5px;
 }
-.sort {
-  flex: none;
-  width: 118px;
-  min-height: 36px;
-  padding: 0 10px;
-  border-radius: 999px;
-  background: var(--paper-3);
+/* o InkSelect tem duas raízes (gatilho + lista): o escopo do pai só alcança via :deep */
+.filters :deep(.sort) {
+  flex: 0 0 136px;
+  width: 136px;
+  margin-left: auto;
 }
 .lib-list {
   display: grid;

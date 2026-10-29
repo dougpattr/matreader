@@ -219,7 +219,7 @@ export function renderDocument(d: Matricula, o: RenderOptions): { html: string; 
         <td class="mono small">${coord}</td><td>${sv(s.confrontante)}</td></tr>`;
     });
     h += '</tbody></table></div>';
-    if (many) h += `<button type="button" class="plaque plaque--sm" data-seg-all>Mostrar os ${segs.length} segmentos</button>`;
+    if (many) h += `<button type="button" class="btn btn--sm" data-seg-all>Mostrar os ${segs.length} segmentos</button>`;
     h += '</section>';
   }
 

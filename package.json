@@ -1,6 +1,6 @@
 {
   "name": "matreader",
-  "version": "4.0.0",
+  "version": "4.1.0",
   "private": true,
   "description": "MatReader — transforma matrículas de imóveis em documento conferido, desenha o terreno sobre satélite, junta PDFs e guarda tudo no aparelho. PWA offline em Ionic + Vue + TypeScript + WebAssembly.",
   "type": "module",

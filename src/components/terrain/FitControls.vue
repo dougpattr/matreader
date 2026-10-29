@@ -56,9 +56,9 @@ function reset() {
     </div>
     <div class="fit-row">
       <span class="label">Espelhar</span>
-      <button type="button" class="plaque plaque--sm" :class="{ 'plaque--primary': mat.fit.flipX }" :aria-pressed="mat.fit.flipX" @click="mat.patchFit({ flipX: !mat.fit.flipX })">Eixo X</button>
-      <button type="button" class="plaque plaque--sm" :class="{ 'plaque--primary': mat.fit.flipY }" :aria-pressed="mat.fit.flipY" @click="mat.patchFit({ flipY: !mat.fit.flipY })">Eixo Y</button>
-      <button type="button" class="plaque plaque--sm" :class="{ 'plaque--primary': terrain.measures }" :aria-pressed="terrain.measures" title="Azimute e distância em cada lado (modo Desenho)" @click="terrain.measures = !terrain.measures">Medidas</button>
+      <button type="button" class="btn btn--sm" :class="{ 'is-on': mat.fit.flipX }" :aria-pressed="mat.fit.flipX" @click="mat.patchFit({ flipX: !mat.fit.flipX })">Eixo X</button>
+      <button type="button" class="btn btn--sm" :class="{ 'is-on': mat.fit.flipY }" :aria-pressed="mat.fit.flipY" @click="mat.patchFit({ flipY: !mat.fit.flipY })">Eixo Y</button>
+      <button type="button" class="btn btn--sm" :class="{ 'is-on': terrain.measures }" :aria-pressed="terrain.measures" title="Azimute e distância em cada lado (modo Desenho)" @click="terrain.measures = !terrain.measures">Medidas</button>
     </div>
     <div class="fit-row">
       <span class="label">Opacidade</span>
@@ -74,7 +74,7 @@ function reset() {
       <small>Usada quando a matrícula só traz azimutes e distâncias. Tocar no mapa também preenche.</small>
     </div>
     <div class="fit-row end">
-      <button type="button" class="plaque plaque--sm plaque--ghost" @click="reset"><Icon name="refresh" size="sm" />Desfazer ajustes</button>
+      <button type="button" class="btn btn--sm btn--quiet" @click="reset"><Icon name="refresh" size="sm" />Desfazer ajustes</button>
     </div>
   </div>
 </template>

@@ -20,7 +20,7 @@ onMounted(() => {
     (entries) => {
       const vis = entries.filter((e) => e.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
       const id = (vis?.target as HTMLElement | undefined)?.dataset.panel as PanelId | undefined;
-      if (id) ui.activePanel = id;
+      if (id && Date.now() > ui.spyPauseUntil) ui.activePanel = id;
     },
     { rootMargin: '-25% 0px -55% 0px', threshold: [0, 0.25, 0.5] },
   );
@@ -47,7 +47,8 @@ onBeforeUnmount(() => spy?.disconnect());
 .bento {
   display: grid;
   gap: var(--gutter);
-  padding: var(--gutter) var(--gutter) calc(var(--s8) + env(safe-area-inset-bottom, 0px));
+  /* o cabeçalho flutua por cima: o conteúdo começa abaixo dele, com folga */
+  padding: calc(var(--float-top) + 6px) var(--gutter) calc(var(--s8) + var(--safe-bottom));
   max-width: 1760px;
   margin: 0 auto;
   align-items: stretch;

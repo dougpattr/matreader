@@ -21,13 +21,14 @@ export interface SettingsState {
   flowContract: 'v2' | 'v1' | null;
 }
 
-const KEY = 'matreader:settings:v1';
+const KEY = 'matreader:settings:v2';
+const KEY_V1 = 'matreader:settings:v1';
 
 const defaults = (): SettingsState => ({
   flowUrl: import.meta.env.VITE_DEFAULT_FLOW_URL ?? '',
   sendPdf: 'auto',
   ocrMode: 'auto',
-  timeoutMin: 5,
+  timeoutMin: 10,
   autosave: true,
   motion: true,
   theme: 'auto',
@@ -38,7 +39,12 @@ const defaults = (): SettingsState => ({
 
 export const useSettingsStore = defineStore('settings', {
   state: (): SettingsState => {
-    const saved = local.json<Partial<SettingsState>>(KEY, {});
+    let saved = local.json<Partial<SettingsState> | null>(KEY, null);
+    if (!saved) {
+      // v1 → v2: o protocolo por tarefa pede mais tempo-limite (o agente leva minutos)
+      saved = local.json<Partial<SettingsState>>(KEY_V1, {});
+      saved.timeoutMin = Math.max(10, saved.timeoutMin ?? 10);
+    }
     // URL da versão anterior (mat_webhook) continua valendo
     const legacyUrl = local.get('mat_webhook') ?? local.get('mat_webhook_url') ?? '';
     return { ...defaults(), flowUrl: legacyUrl, ...saved };

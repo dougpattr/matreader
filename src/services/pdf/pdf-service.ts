@@ -77,17 +77,17 @@ export async function pdfInfo(file: File): Promise<{ pages: number; thumb: strin
   }
 }
 
-async function imageToJpeg(file: Blob, quality = 0.88): Promise<Uint8Array> {
+async function convertImage(file: Blob, lossless: boolean): Promise<Uint8Array> {
   const bmp = await createImageBitmap(file);
   const cv = canvasFor(bmp.width, bmp.height);
   cv.getContext('2d')!.drawImage(bmp, 0, 0);
   bmp.close();
-  const blob = await new Promise<Blob>((res, rej) => cv.toBlob((b) => (b ? res(b) : rej(new Error('falha ao converter imagem'))), 'image/jpeg', quality));
+  const blob = await new Promise<Blob>((res, rej) => cv.toBlob((b) => (b ? res(b) : rej(new Error('falha ao converter imagem'))), lossless ? 'image/png' : 'image/jpeg', 0.88));
   return new Uint8Array(await blob.arrayBuffer());
 }
 
 /** Junta PDFs e imagens (na ordem dada) num PDF só. */
-export async function mergeFiles(files: File[], onProgress?: Progress): Promise<Uint8Array> {
+export async function mergeFiles(files: File[], onProgress?: Progress, losslessImages = false): Promise<Uint8Array> {
   const { PDFDocument } = await pdfLib();
   if (files.length === 1 && isPdf(files[0]!)) return new Uint8Array(await files[0]!.arrayBuffer());
   const doc = await PDFDocument.create();
@@ -96,7 +96,7 @@ export async function mergeFiles(files: File[], onProgress?: Progress): Promise<
     onProgress?.(i / files.length, `Juntando ${i + 1} de ${files.length}`);
     const buf = await f.arrayBuffer();
     if (isPdf(f)) {
-      const src = await PDFDocument.load(buf, { ignoreEncryption: true });
+      const src = await PDFDocument.load(buf, { ignoreEncryption: !losslessImages });
       const pages = await doc.copyPages(src, src.getPageIndices());
       pages.forEach((p) => doc.addPage(p));
     } else {
@@ -105,7 +105,8 @@ export async function mergeFiles(files: File[], onProgress?: Progress): Promise<
       try {
         img = png ? await doc.embedPng(buf) : await doc.embedJpg(buf);
       } catch {
-        img = await doc.embedJpg(await imageToJpeg(f));
+        const converted = await convertImage(f, losslessImages);
+        img = losslessImages ? await doc.embedPng(converted) : await doc.embedJpg(converted);
       }
       const page = doc.addPage([img.width, img.height]);
       page.drawImage(img, { x: 0, y: 0, width: img.width, height: img.height });

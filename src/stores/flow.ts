@@ -1,11 +1,21 @@
-/* A jornada da matrícula: arquivo → texto (PDF/OCR) → envio ao fluxo →
+/* A jornada da matrícula: arquivo → leitura no fluxo (ou PDF/OCR local) →
    agente do Copilot Studio → conferência → documento. Com cancelar,
    tempo-limite, progresso real e histórico das últimas execuções. */
 import { defineStore } from 'pinia';
 import { computed, ref, shallowRef } from 'vue';
 import { local, sha256Hex } from '@/core/browser';
 import { extractText, type ExtractedText } from '@/services/extract/text-extraction';
-import { awaitTask, convertWithFlow, FlowError, pingFlow, type ConvertResponse, type PingResponse, type TaskProgress } from '@/services/flow/flow-client';
+import { prepareDocument } from '@/services/flow/prepare-document';
+import type { ConvertRequest } from '@/services/flow/flow-client';
+import {
+  awaitTask,
+  convertWithFlow,
+  FlowError,
+  pingFlow,
+  type ConvertResponse,
+  type PingResponse,
+  type TaskProgress,
+} from '@/services/flow/flow-client';
 import { isSupported, mergeFiles, rasterize, stripAnnotations, toBase64 } from '@/services/pdf/pdf-service';
 import { useMatriculaStore } from './matricula';
 import { useSettingsStore } from './settings';
@@ -14,7 +24,7 @@ export type StageId = 'arquivo' | 'texto' | 'envio' | 'agente' | 'conferencia';
 
 export const STAGES: { id: StageId; label: string; short: string; hint: string }[] = [
   { id: 'arquivo', label: 'Arquivo', short: 'Arquivo', hint: 'junta e prepara' },
-  { id: 'texto', label: 'Texto', short: 'Texto', hint: 'PDF ou OCR' },
+  { id: 'texto', label: 'Leitura', short: 'Leitura', hint: 'no fluxo ou aparelho' },
   { id: 'envio', label: 'Envio', short: 'Envio', hint: 'ao seu fluxo' },
   { id: 'agente', label: 'Agente', short: 'Agente', hint: 'extrai e confere' },
   { id: 'conferencia', label: 'Conferência', short: 'Conferir', hint: 'o app refaz as contas' },
@@ -35,7 +45,7 @@ export const PHRASES = [
   'Lendo a averbação que ninguém nunca leu.',
   'Somando a área. Depois somando de novo, por garantia.',
   'Conferindo o que a IA respondeu — duas vezes.',
-  'Isso costuma levar de 30 segundos a 2 minutos.',
+  'A leitura e a interpretação podem levar alguns minutos.',
   'Quase lá. A tribo segue viagem.',
 ];
 
@@ -107,6 +117,9 @@ export const useFlowStore = defineStore('flow', () => {
     busy.value = true;
     outcome.value = null;
     error.value = null;
+    extracted.value = null;
+    lastText.value = '';
+    lastRaw.value = '';
     progress.value = 0;
     t0.value = Date.now();
     now.value = t0.value;
@@ -137,7 +150,10 @@ export const useFlowStore = defineStore('flow', () => {
   }
 
   function record(r: Omit<RunRecord, 'id' | 'at'>) {
-    history.value = [{ id: `${Date.now().toString(36)}`, at: Date.now(), ...r }, ...history.value].slice(0, 15);
+    history.value = [{ id: `${Date.now().toString(36)}`, at: Date.now(), ...r }, ...history.value].slice(
+      0,
+      15,
+    );
     local.setJson(HISTORY_KEY, history.value);
   }
 
@@ -158,59 +174,121 @@ export const useFlowStore = defineStore('flow', () => {
     if (busy.value) throw new FlowError('config', 'Já existe uma conversão em andamento.');
     const files = list.filter(isSupported);
     if (!files.length) throw new FlowError('config', 'Escolha o PDF ou as fotos da matrícula.');
-    if (!settings.flowConfigured) throw new FlowError('config', 'Configure a URL do fluxo em Configurações.', '', 0, 'Toque em Configurações → Fluxo do Power Automate.');
+    if (!settings.flowConfigured)
+      throw new FlowError(
+        'config',
+        'Configure a URL do fluxo em Configurações.',
+        '',
+        0,
+        'Toque em Configurações → Fluxo do Power Automate.',
+      );
     const id = begin();
     const signal = controller!.signal;
     const fileName = files.length > 1 ? `${files.length} arquivos unificados` : files[0]!.name;
     let stats: Omit<ExtractedText, 'text'> | null = null;
     try {
       set('arquivo', 0.03, files.length > 1 ? `Preparando ${files.length} arquivos` : 'Preparando o arquivo');
-      set('texto', 0.06, 'Lendo o texto');
-      const ex = await extractText(files, settings.ocrMode, (p, l) => set('texto', 0.06 + p * 0.44, l), signal);
-      const { text, ...rest } = ex;
-      stats = rest;
-      extracted.value = rest;
-      lastText.value = text;
-      if (!text.trim()) {
-        throw new FlowError('config', 'Não encontrei texto neste arquivo.', '', 0,
-          settings.ocrMode === 'nunca' ? 'Ative o OCR em Configurações para ler páginas digitalizadas.' : 'A imagem pode estar ilegível: tente uma digitalização melhor.');
-      }
+      let req: ConvertRequest;
+      if (settings.readingMode === 'fluxo') {
+        set('arquivo', 0.04, 'Verificando a leitura de documentos no fluxo');
+        const capability = await pingFlow(settings.flowUrl.trim(), signal);
+        if (!capability.leituraArquivo) {
+          throw new FlowError(
+            'config',
+            'Este fluxo ainda não aceita leitura de arquivos com AI Builder.',
+            '',
+            0,
+            'Atualize o scope para mat-flow/3.1 e configure a conexão do AI Builder, ou escolha Leitura no aparelho em Configurações.',
+          );
+        }
+        set('texto', 0.06, 'Preparando o documento para leitura no fluxo');
+        req = await prepareDocument(files, (p, l) => set('texto', 0.06 + p * 0.44, l), signal);
+        stats = {
+          pages: req.paginas,
+          method: 'ai-builder',
+          chars: 0,
+          ocrPages: 0,
+          ocrConfidence: null,
+          removedLines: 0,
+        };
+        extracted.value = stats;
+      } else {
+        set('texto', 0.06, 'Lendo o texto');
+        const ex = await extractText(
+          files,
+          settings.ocrMode,
+          (p, l) => set('texto', 0.06 + p * 0.44, l),
+          signal,
+        );
+        const { text, ...rest } = ex;
+        stats = rest;
+        extracted.value = rest;
+        lastText.value = text;
+        if (!text.trim()) {
+          throw new FlowError(
+            'config',
+            'Não encontrei texto neste arquivo.',
+            '',
+            0,
+            settings.ocrMode === 'nunca'
+              ? 'Ative o OCR em Configurações para ler páginas digitalizadas.'
+              : 'A imagem pode estar ilegível: tente uma digitalização melhor.',
+          );
+        }
 
-      let base64: string | undefined;
-      if (settings.shouldSendPdf) {
-        set('envio', 0.52, 'Preparando o PDF para o fluxo antigo');
-        let bytes = await mergeFiles(files);
-        bytes = (await stripAnnotations(bytes)).bytes;
-        if (bytes.byteLength > 20 * 1024 * 1024) bytes = await rasterize(bytes, { targetWidth: 1000, jpegQuality: 0.45 });
-        base64 = await toBase64(bytes);
-      }
-      signal.throwIfAborted();
-
-      set('envio', 0.58, 'Enviando ao fluxo');
-      const hash = await sha256Hex(new TextEncoder().encode(text));
-      set('agente', 0.62, 'O agente está lendo a matrícula');
-      waitStart = Date.now();
-      const info = { file: fileName, pages: ex.pages, method: ex.method, chars: ex.chars };
-      const resp = await convertWithFlow(
-        settings.flowUrl.trim(),
-        {
-          filename: files.length > 1 ? 'documentos_unificados.pdf' : files[0]!.name,
+        let base64: string | undefined;
+        if (settings.shouldSendPdf) {
+          set('envio', 0.52, 'Preparando o PDF para o fluxo antigo');
+          let bytes = await mergeFiles(files);
+          bytes = (await stripAnnotations(bytes)).bytes;
+          if (bytes.byteLength > 20 * 1024 * 1024)
+            bytes = await rasterize(bytes, { targetWidth: 1000, jpegQuality: 0.45 });
+          base64 = await toBase64(bytes);
+        }
+        const hash = await sha256Hex(new TextEncoder().encode(text));
+        req = {
+          filename: base64
+            ? files.length === 1 && /\.pdf$/i.test(files[0]!.name)
+              ? files[0]!.name
+              : 'documentos_unificados.pdf'
+            : files[0]!.name,
           texto: text,
           paginas: ex.pages,
           metodo_texto: ex.method,
           ocr_confianca: ex.ocrConfidence,
           sha256: hash,
           base64Encoded: base64,
-        },
+          leitura: 'local',
+        };
+      }
+      signal.throwIfAborted();
+      set('envio', 0.58, 'Enviando ao fluxo');
+      const info = { file: fileName, pages: req.paginas, method: req.metodo_texto, chars: req.texto.length };
+      const resp = await convertWithFlow(
+        settings.flowUrl.trim(),
+        req,
         signal,
         Math.max(1, settings.timeoutMin) * 60_000,
-        (tarefa) => savePending({ tarefa, at: t0.value, ...info }),
+        (tarefa) => {
+          savePending({ tarefa, at: t0.value, ...info });
+          set('agente', 0.62, 'O fluxo está lendo e interpretando a matrícula');
+          waitStart = Date.now();
+        },
         onTaskProgress,
       );
-      finish(id, resp, info, { metodo_texto: ex.method, ocr_confianca: ex.ocrConfidence, paginas: ex.pages });
+      finish(id, resp, info, {
+        metodo_texto: req.metodo_texto,
+        ocr_confianca: req.ocr_confianca,
+        paginas: req.paginas,
+      });
       return true;
     } catch (e) {
-      fail(id, e, { file: fileName, pages: stats?.pages ?? 0, method: stats?.method ?? '—', chars: stats?.chars ?? 0 });
+      fail(id, e, {
+        file: fileName,
+        pages: stats?.pages ?? 0,
+        method: stats?.method ?? '—',
+        chars: stats?.chars ?? 0,
+      });
     }
   }
 
@@ -229,10 +307,19 @@ export const useFlowStore = defineStore('flow', () => {
 
   function onTaskProgress(p: TaskProgress) {
     const min = Math.floor((Date.now() - p.desde) / 60000);
-    label.value = `O agente está trabalhando${min ? ` há ${min} min` : ''} · consulta ${p.consultas}`;
+    label.value = `O fluxo está lendo e interpretando${min ? ` há ${min} min` : ''} · consulta ${p.consultas}`;
   }
 
-  function finish(id: number, resp: ConvertResponse, info: Omit<Pending, 'tarefa' | 'at'>, fallbackMeta: Record<string, unknown>) {
+  function finish(
+    id: number,
+    resp: ConvertResponse,
+    info: Omit<Pending, 'tarefa' | 'at'>,
+    fallbackMeta: Record<string, unknown>,
+  ) {
+    if (typeof resp.meta?.caracteres_recebidos === 'number') {
+      info.chars = resp.meta.caracteres_recebidos;
+      if (extracted.value) extracted.value = { ...extracted.value, chars: info.chars };
+    }
     clearPending();
     pendingTask.value = null;
     settings.flowContract = resp.envelope ? 'v2' : 'v1';
@@ -240,17 +327,35 @@ export const useFlowStore = defineStore('flow', () => {
     set('conferencia', 0.95, 'Conferindo e montando o documento');
     const loaded = mat.loadText(resp.raw, { source: 'ia', meta: resp.meta ?? fallbackMeta });
     if (!loaded.ok) {
-      throw new FlowError('fluxo', 'A resposta não trouxe um JSON de matrícula que eu conseguisse ler.', loaded.message, resp.status,
-        'Abra "Resposta do agente" para conferir o que ele devolveu.');
+      throw new FlowError(
+        'fluxo',
+        'A resposta não trouxe um JSON de matrícula que eu conseguisse ler.',
+        loaded.message,
+        resp.status,
+        'Abra "Resposta do agente" para conferir o que ele devolveu.',
+      );
     }
     progress.value = 1;
-    label.value = mat.data?.matricula.numero ? `Matrícula ${mat.data.matricula.numero} carregada` : 'Matrícula carregada';
+    label.value = mat.data?.matricula.numero
+      ? `Matrícula ${mat.data.matricula.numero} carregada`
+      : 'Matrícula carregada';
     end(id, true);
-    record({ ...info, ms: Date.now() - t0.value, ok: true, numero: mat.data?.matricula.numero ?? null, message: 'ok' });
+    record({
+      ...info,
+      ms: Date.now() - t0.value,
+      ok: true,
+      numero: mat.data?.matricula.numero ?? null,
+      message: 'ok',
+    });
   }
 
   function fail(id: number, e: unknown, info: Omit<Pending, 'tarefa' | 'at'>): never {
-    const err = e instanceof FlowError ? e : (e as Error)?.name === 'AbortError' ? new FlowError('cancelado', 'Conversão cancelada.') : new FlowError('fluxo', String((e as Error)?.message ?? e));
+    const err =
+      e instanceof FlowError
+        ? e
+        : (e as Error)?.name === 'AbortError'
+          ? new FlowError('cancelado', 'Conversão cancelada.')
+          : new FlowError('fluxo', String((e as Error)?.message ?? e));
     // tempo esgotado no app: a tarefa segue no fluxo e pode ser retomada
     if (err.kind !== 'tempo') {
       clearPending();
@@ -259,7 +364,8 @@ export const useFlowStore = defineStore('flow', () => {
     error.value = err;
     label.value = err.message;
     end(id, false);
-    if (err.kind !== 'cancelado') record({ ...info, ms: Date.now() - t0.value, ok: false, numero: null, message: err.message });
+    if (err.kind !== 'cancelado')
+      record({ ...info, ms: Date.now() - t0.value, ok: false, numero: null, message: err.message });
     throw err;
   }
 
@@ -279,7 +385,14 @@ export const useFlowStore = defineStore('flow', () => {
     try {
       set('agente', 0.7, 'Retomando a tarefa que ficou no fluxo');
       waitStart = Date.now();
-      const resp = await awaitTask(settings.flowUrl.trim(), p.tarefa, signal, Date.now() + Math.max(1, settings.timeoutMin) * 60_000, onTaskProgress, p.at);
+      const resp = await awaitTask(
+        settings.flowUrl.trim(),
+        p.tarefa,
+        signal,
+        Date.now() + Math.max(1, settings.timeoutMin) * 60_000,
+        onTaskProgress,
+        p.at,
+      );
       finish(id, resp, info, { metodo_texto: p.method, paginas: p.pages });
       return true;
     } catch (e) {
@@ -307,7 +420,26 @@ export const useFlowStore = defineStore('flow', () => {
   }
 
   return {
-    busy, stage, stageIndex, progress, label, phrase, elapsed, outcome, error, extracted, lastText, lastRaw, history, ping, pendingTask,
-    convert, cancel, dismiss, testConnection, clearHistory, resumePending,
+    busy,
+    stage,
+    stageIndex,
+    progress,
+    label,
+    phrase,
+    elapsed,
+    outcome,
+    error,
+    extracted,
+    lastText,
+    lastRaw,
+    history,
+    ping,
+    pendingTask,
+    convert,
+    cancel,
+    dismiss,
+    testConnection,
+    clearHistory,
+    resumePending,
   };
 });

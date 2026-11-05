@@ -42,6 +42,8 @@ export interface ConvertRequest {
   ocr_confianca: number | null;
   sha256: string | null;
   base64Encoded?: string;
+  leitura?: 'fluxo' | 'local';
+  mime_type?: string;
 }
 
 export interface ConvertResponse {
@@ -54,6 +56,7 @@ export interface ConvertResponse {
 
 export interface PingResponse {
   ok: boolean;
+  leituraArquivo: boolean;
   versao: string | null;
   agente: string | null;
   limite: number | null;
@@ -257,19 +260,23 @@ export async function convertWithFlow(
 /** Teste de conexão: o scope responde na hora, sem acionar o agente. */
 export async function pingFlow(url: string, signal?: AbortSignal): Promise<PingResponse> {
   if (!url) throw new FlowError('config', 'Configure a URL do fluxo primeiro.');
+  if (signal?.aborted) throw new FlowError('cancelado', 'Teste cancelado.');
   const t0 = performance.now();
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 30_000);
-  signal?.addEventListener('abort', () => ctrl.abort(), { once: true });
+  const abort = () => ctrl.abort();
+  signal?.addEventListener('abort', abort, { once: true });
   try {
     const resp = await post(url, { ping: true, acao: 'ping', contrato: CONTRACT, app }, ctrl.signal);
     const ms = Math.round(performance.now() - t0);
     const text = (await resp.text()).trim();
     const obj = parseObj(text);
+    if (!resp.ok) throw new FlowError('http', `O fluxo respondeu ${resp.status}.`, cleanMsg(text), resp.status);
     if (obj && typeof obj.ok === 'boolean') {
       if (!obj.ok) throw new FlowError('fluxo', cleanMsg(String(obj.mensagem ?? 'O fluxo recusou o teste.')), cleanMsg(String(obj.detalhe ?? '')), resp.status);
       return {
         ok: true,
+        leituraArquivo: obj.pong === true && obj.leitura_arquivo === true,
         versao: typeof obj.versao === 'string' ? obj.versao : null,
         agente: typeof obj.agente === 'string' ? obj.agente : null,
         limite: typeof obj.limite_caracteres === 'number' ? obj.limite_caracteres : null,
@@ -278,13 +285,14 @@ export async function pingFlow(url: string, signal?: AbortSignal): Promise<PingR
         envelope: true,
       };
     }
-    if (!resp.ok) throw new FlowError('http', `O fluxo respondeu ${resp.status}.`, cleanMsg(text), resp.status);
-    return { ok: true, versao: null, agente: null, limite: null, modo: null, ms, envelope: false };
+    return { ok: true, leituraArquivo: false, versao: null, agente: null, limite: null, modo: null, ms, envelope: false };
   } catch (e) {
     if (e instanceof FlowError) throw e;
+    if (signal?.aborted) throw new FlowError('cancelado', 'Teste cancelado.');
     if ((e as Error)?.name === 'AbortError') throw new FlowError('tempo', 'O fluxo não respondeu ao teste em 30 segundos.');
     throw networkError(e, 0);
   } finally {
     clearTimeout(timer);
+    signal?.removeEventListener('abort', abort);
   }
 }

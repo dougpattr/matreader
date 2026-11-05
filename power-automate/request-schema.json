@@ -1,0 +1,20 @@
+{
+  "type": "object",
+  "properties": {
+    "contrato": { "type": "string" },
+    "acao": { "type": "string" },
+    "ping": { "type": "boolean" },
+    "tarefa": { "type": "string" },
+    "leitura": { "type": "string", "enum": ["fluxo", "local"] },
+    "filename": { "type": "string" },
+    "mime_type": { "type": "string" },
+    "base64Encoded": { "type": "string" },
+    "texto": { "type": "string" },
+    "paginas": { "type": "integer" },
+    "metodo_texto": { "type": "string" },
+    "ocr_confianca": { "type": ["number", "null"] },
+    "caracteres": { "type": "integer" },
+    "sha256": { "type": ["string", "null"] },
+    "app": { "type": "object" }
+  }
+}

@@ -2,7 +2,7 @@
 // designer novo) que liga o MatReader ao agente do Copilot Studio.
 //
 //   npm run scope                        → power-automate/scope-matreader.template.json (com marcadores)
-//   npm run scope -- --agente X --ambiente Y --conexao-copilot C [--conexao-onedrive O]
+//   npm run scope -- --agente X --ambiente Y --conexao-copilot C [--conexao-onedrive O] [--conexao-ai-builder A]
 //                                        → power-automate/local/scope-matreader.json (pessoal, fora do git)
 //
 // Contrato matreader/fluxo@3 — ASSÍNCRONO POR TAREFA. O Power Automate
@@ -29,36 +29,49 @@ const cfg = {
   ambiente: arg('ambiente', '{{ID_DO_AMBIENTE}}'),
   conexaoCopilot: arg('conexao-copilot', '{{CONEXAO_COPILOT_STUDIO}}'),
   conexaoOneDrive: arg('conexao-onedrive', 'shared-onedriveforbu-ESCOLHA-SUA-CONEXAO'),
+  conexaoAiBuilder: arg('conexao-ai-builder', 'shared-commondataser-ESCOLHA-SUA-CONEXAO'),
   limite: Number(arg('limite', '60000')),
   pasta: arg('pasta', '/MatReader/tarefas'),
 };
 
 const prompt = readFileSync(join(root, 'src', 'domain', 'prompts', 'agente.txt'), 'utf8').trim();
-if (prompt.includes('@')) throw new Error('O prompt do agente não pode conter "@" (vira expressão no Power Automate).');
+if (prompt.includes('@'))
+  throw new Error('O prompt do agente não pode conter "@" (vira expressão no Power Automate).');
 
-const VERSAO = 'mat-flow/3.0';
-const T = "outputs('Texto_recebido')";
+const VERSAO = 'mat-flow/3.1';
+const T = "outputs('Texto_para_agente')";
+const REMOTE = "equals(triggerBody()?['leitura'], 'fluxo')";
+const METHOD = `if(${REMOTE}, 'ai-builder', coalesce(triggerBody()?['metodo_texto'], 'desconhecido'))`;
 const LIM = "outputs('Config_MatReader')?['limite_caracteres']";
 const RUN = "workflow()?['run']?['name']";
 const TAREFA = "outputs('Tarefa_segura')";
 const json = { 'Content-Type': 'application/json; charset=utf-8' };
 
-const response = (statusCode, body, runAfter = {}) => ({ type: 'Response', kind: 'Http', inputs: { statusCode, headers: json, body }, runAfter });
+const response = (statusCode, body, runAfter = {}) => ({
+  type: 'Response',
+  kind: 'Http',
+  inputs: { statusCode, headers: json, body },
+  runAfter,
+});
 
 const onedrive = (operationId, parameters, runAfter) => ({
   type: 'OpenApiConnection',
   inputs: {
     parameters,
-    host: { apiId: '/providers/Microsoft.PowerApps/apis/shared_onedriveforbusiness', connection: 'shared_onedriveforbusiness', operationId },
+    host: {
+      apiId: '/providers/Microsoft.PowerApps/apis/shared_onedriveforbusiness',
+      connection: 'shared_onedriveforbusiness',
+      operationId,
+    },
   },
   runAfter,
 });
 
 /* ---------- caminho "converter" (padrão) ---------- */
 const converter = {
-  Validar_texto: {
+  Validar_entrada: {
     type: 'If',
-    expression: { and: [{ greaterOrEquals: [`@length(${T})`, "@outputs('Config_MatReader')?['minimo_caracteres']"] }] },
+    expression: `@if(${REMOTE}, and(not(empty(triggerBody()?['base64Encoded'])), lessOrEquals(length(string(triggerBody()?['base64Encoded'])), 26666668), equals(triggerBody()?['mime_type'], 'application/pdf'), greaterOrEquals(coalesce(triggerBody()?['paginas'], 0), 1), lessOrEquals(coalesce(triggerBody()?['paginas'], 0), 2000)), greaterOrEquals(length(outputs('Texto_recebido')), outputs('Config_MatReader')?['minimo_caracteres']))`,
     actions: {
       Criar_tarefa: onedrive(
         'CreateFile',
@@ -71,7 +84,13 @@ const converter = {
       ),
       Responder_aceito: response(
         200,
-        { ok: true, status: 'processando', tarefa: `@{${RUN}}`, versao: VERSAO, consultar_a_cada_segundos: 5 },
+        {
+          ok: true,
+          status: 'processando',
+          tarefa: `@{${RUN}}`,
+          versao: VERSAO,
+          consultar_a_cada_segundos: 5,
+        },
         { Criar_tarefa: ['Succeeded'] },
       ),
       Responder_sem_onedrive: response(
@@ -79,82 +98,157 @@ const converter = {
         {
           ok: false,
           mensagem: 'Não consegui criar a tarefa no OneDrive.',
-          detalhe: "@{coalesce(actions('Criar_tarefa')?['error']?['message'], 'confira a conexão do OneDrive for Business no fluxo')}",
+          detalhe:
+            "@{coalesce(actions('Criar_tarefa')?['error']?['message'], 'confira a conexão do OneDrive for Business no fluxo')}",
           etapa: 'Criar_tarefa',
         },
         { Criar_tarefa: ['Failed', 'TimedOut'] },
       ),
-      Prompt_extracao: { type: 'Compose', inputs: prompt, runAfter: { Responder_aceito: ['Succeeded'] } },
-      Mensagem_agente: {
-        type: 'Compose',
-        inputs:
-          "@{outputs('Prompt_extracao')}\n\n[METADADOS DO ENVIO]\n" +
-          "- arquivo: @{coalesce(triggerBody()?['filename'], 'matricula.pdf')}\n" +
-          "- páginas: @{coalesce(triggerBody()?['paginas'], '?')}\n" +
-          "- texto obtido por: @{coalesce(triggerBody()?['metodo_texto'], 'desconhecido')}\n" +
-          "- confiança média do OCR: @{coalesce(triggerBody()?['ocr_confianca'], 'não se aplica')}\n" +
-          `- caracteres enviados: @{min(length(${T}), ${LIM})} de @{length(${T})}` +
-          `@{if(greater(length(${T}), ${LIM}), ' (TEXTO CORTADO: registre em alertas que o fim do documento não foi enviado)', '')}\n\n` +
-          `TEXTO DA MATRÍCULA:\n<<<INICIO>>>\n@{substring(${T}, 0, min(length(${T}), ${LIM}))}\n<<<FIM>>>`,
-        runAfter: { Prompt_extracao: ['Succeeded'] },
-      },
-      Execute_Agent_and_wait: {
-        type: 'OpenApiConnectionWebhook',
-        inputs: {
-          parameters: { Copilot: cfg.agente, environmentId: cfg.ambiente, 'body/message': "@{outputs('Mensagem_agente')}" },
-          host: {
-            apiId: '/providers/Microsoft.PowerApps/apis/shared_microsoftcopilotstudio',
-            connection: 'shared_microsoftcopilotstudio',
-            operationId: 'ExecuteCopilotAsyncV2',
+      Processar_documento: {
+        type: 'Scope',
+        runAfter: { Responder_aceito: ['Succeeded'] },
+        actions: {
+          Ler_no_AI_Builder: {
+            type: 'If',
+            expression: `@${REMOTE}`,
+            runAfter: {},
+            actions: {
+              Recognize_text_in_image_or_document: {
+                type: 'OpenApiConnection',
+                inputs: {
+                  parameters: { 'item/requestv2/base64Encoded': "@triggerBody()?['base64Encoded']" },
+                  host: {
+                    apiId: '/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps',
+                    connection: 'shared_commondataserviceforapps',
+                    operationId: 'aibuilderpredict_textrecognition',
+                  },
+                },
+                limit: { timeout: 'PT20M' },
+                runAfter: {},
+              },
+            },
+            else: { actions: {} },
+          },
+          Texto_para_agente: {
+            type: 'Compose',
+            inputs: `@if(${REMOTE}, trim(string(coalesce(body('Recognize_text_in_image_or_document')?['responsev2']?['predictionOutput']?['fullText'], ''))), outputs('Texto_recebido'))`,
+            runAfter: { Ler_no_AI_Builder: ['Succeeded'] },
+          },
+          Validar_leitura: {
+            type: 'If',
+            expression: `@greaterOrEquals(length(${T}), outputs('Config_MatReader')?['minimo_caracteres'])`,
+            runAfter: { Texto_para_agente: ['Succeeded'] },
+            actions: {
+              Prompt_extracao: { type: 'Compose', inputs: prompt, runAfter: {} },
+              Mensagem_agente: {
+                type: 'Compose',
+                inputs:
+                  "@{outputs('Prompt_extracao')}\n\n[METADADOS DO ENVIO]\n" +
+                  "- arquivo: @{coalesce(triggerBody()?['filename'], 'matricula.pdf')}\n" +
+                  "- páginas: @{coalesce(triggerBody()?['paginas'], '?')}\n" +
+                  `- texto obtido por: @{${METHOD}}\n` +
+                  "- confiança média do OCR: @{coalesce(triggerBody()?['ocr_confianca'], 'não se aplica')}\n" +
+                  `- caracteres enviados: @{min(length(${T}), ${LIM})} de @{length(${T})}` +
+                  `@{if(greater(length(${T}), ${LIM}), ' (TEXTO CORTADO: registre em alertas que o fim do documento não foi enviado)', '')}\n\n` +
+                  `TEXTO DA MATRÍCULA:\n<<<INICIO>>>\n@{substring(${T}, 0, min(length(${T}), ${LIM}))}\n<<<FIM>>>`,
+                runAfter: { Prompt_extracao: ['Succeeded'] },
+              },
+              Execute_Agent_and_wait: {
+                type: 'OpenApiConnectionWebhook',
+                inputs: {
+                  parameters: {
+                    Copilot: cfg.agente,
+                    environmentId: cfg.ambiente,
+                    'body/message': "@{outputs('Mensagem_agente')}",
+                  },
+                  host: {
+                    apiId: '/providers/Microsoft.PowerApps/apis/shared_microsoftcopilotstudio',
+                    connection: 'shared_microsoftcopilotstudio',
+                    operationId: 'ExecuteCopilotAsyncV2',
+                  },
+                },
+                limit: { timeout: 'PT20M' },
+                runAfter: { Mensagem_agente: ['Succeeded'] },
+              },
+              Resultado_ok: {
+                type: 'Compose',
+                inputs: {
+                  ok: true,
+                  status: 'concluido',
+                  tarefa: `@{${RUN}}`,
+                  versao: VERSAO,
+                  resposta: "@{body('Execute_Agent_and_wait')?['lastResponse']}",
+                  meta: {
+                    arquivo: "@{coalesce(triggerBody()?['filename'], 'matricula.pdf')}",
+                    paginas: "@triggerBody()?['paginas']",
+                    metodo_texto: `@${METHOD}`,
+                    ocr_confianca: `@if(${REMOTE}, null, triggerBody()?['ocr_confianca'])`,
+                    caracteres_recebidos: `@length(${T})`,
+                    caracteres_enviados: `@min(length(${T}), ${LIM})`,
+                    truncado: `@greater(length(${T}), ${LIM})`,
+                    agente: "@{outputs('Config_MatReader')?['agente']}",
+                    run: `@{${RUN}}`,
+                  },
+                },
+                runAfter: { Execute_Agent_and_wait: ['Succeeded'] },
+              },
+              Gravar_resultado: onedrive(
+                'UpdateFile',
+                { id: "@{body('Criar_tarefa')?['Id']}", body: "@{outputs('Resultado_ok')}" },
+                { Resultado_ok: ['Succeeded'] },
+              ),
+            },
+            else: {
+              actions: {
+                Resultado_sem_texto: {
+                  type: 'Compose',
+                  runAfter: {},
+                  inputs: {
+                    ok: false,
+                    status: 'erro',
+                    tarefa: `@{${RUN}}`,
+                    mensagem: 'A leitura não encontrou texto suficiente para interpretar a matrícula.',
+                    detalhe: `@{concat('Foram lidos ', string(length(${T})), ' caracteres. Confira a legibilidade e se o PDF está protegido.')}`,
+                    etapa: 'Validar_leitura',
+                  },
+                },
+                Gravar_sem_texto: onedrive(
+                  'UpdateFile',
+                  { id: "@{body('Criar_tarefa')?['Id']}", body: "@{outputs('Resultado_sem_texto')}" },
+                  { Resultado_sem_texto: ['Succeeded'] },
+                ),
+              },
+            },
           },
         },
-        limit: { timeout: 'PT20M' },
-        runAfter: { Mensagem_agente: ['Succeeded'] },
       },
-      Resultado_ok: {
-        type: 'Compose',
-        inputs: {
-          ok: true,
-          status: 'concluido',
-          tarefa: `@{${RUN}}`,
-          versao: VERSAO,
-          resposta: "@{body('Execute_Agent_and_wait')?['lastResponse']}",
-          meta: {
-            arquivo: "@{coalesce(triggerBody()?['filename'], 'matricula.pdf')}",
-            paginas: "@triggerBody()?['paginas']",
-            metodo_texto: "@triggerBody()?['metodo_texto']",
-            ocr_confianca: "@triggerBody()?['ocr_confianca']",
-            caracteres_recebidos: `@length(${T})`,
-            caracteres_enviados: `@min(length(${T}), ${LIM})`,
-            truncado: `@greater(length(${T}), ${LIM})`,
-            agente: "@{outputs('Config_MatReader')?['agente']}",
-            run: `@{${RUN}}`,
-          },
-        },
-        runAfter: { Execute_Agent_and_wait: ['Succeeded'] },
-      },
-      Gravar_resultado: onedrive('UpdateFile', { id: "@{body('Criar_tarefa')?['Id']}", body: "@{outputs('Resultado_ok')}" }, { Resultado_ok: ['Succeeded'] }),
       Resultado_erro: {
         type: 'Compose',
         inputs: {
           ok: false,
           status: 'erro',
           tarefa: `@{${RUN}}`,
-          mensagem: 'O agente não concluiu a extração da matrícula.',
-          detalhe: "@{coalesce(actions('Execute_Agent_and_wait')?['error']?['message'], actions('Execute_Agent_and_wait')?['status'], 'sem detalhe')}",
-          etapa: 'Execute_Agent_and_wait',
+          mensagem: 'O fluxo não concluiu a leitura ou a interpretação da matrícula.',
+          detalhe:
+            'Confira o histórico da execução, a conexão e os créditos do AI Builder, e a ação do agente.',
+          etapa: 'Processar_documento',
         },
-        runAfter: { Execute_Agent_and_wait: ['Failed', 'TimedOut'] },
+        runAfter: { Processar_documento: ['Failed', 'TimedOut'] },
       },
-      Gravar_falha: onedrive('UpdateFile', { id: "@{body('Criar_tarefa')?['Id']}", body: "@{outputs('Resultado_erro')}" }, { Resultado_erro: ['Succeeded'] }),
+      Gravar_falha: onedrive(
+        'UpdateFile',
+        { id: "@{body('Criar_tarefa')?['Id']}", body: "@{outputs('Resultado_erro')}" },
+        { Resultado_erro: ['Succeeded'] },
+      ),
     },
     else: {
       actions: {
-        Responder_texto_insuficiente: response(422, {
+        Responder_entrada_invalida: response(422, {
           ok: false,
-          mensagem: 'Texto insuficiente para extrair a matrícula.',
-          detalhe: `@{concat('Recebidos ', string(length(${T})), ' caracteres. Use o MatReader 4 ou mais novo, que extrai o texto do PDF (ou faz OCR) antes de enviar.')}`,
-          etapa: 'Validar_texto',
+          mensagem: 'Documento ou texto inválido para conversão.',
+          detalhe:
+            'Envie um PDF em base64 de até 20 MB e 2.000 páginas com leitura=fluxo, ou pelo menos 200 caracteres com leitura=local.',
+          etapa: 'Validar_entrada',
         }),
       },
     },
@@ -164,11 +258,26 @@ const converter = {
 
 /* ---------- caminho "consultar" ---------- */
 const consultar = {
-  Ler_tarefa: onedrive('GetFileContentByPath', { path: `${cfg.pasta}/@{${TAREFA}}.json`, inferContentType: true }, {}),
-  Responder_tarefa: { type: 'Response', kind: 'Http', inputs: { statusCode: 200, headers: json, body: "@body('Ler_tarefa')" }, runAfter: { Ler_tarefa: ['Succeeded'] } },
+  Ler_tarefa: onedrive(
+    'GetFileContentByPath',
+    { path: `${cfg.pasta}/@{${TAREFA}}.json`, inferContentType: true },
+    {},
+  ),
+  Responder_tarefa: {
+    type: 'Response',
+    kind: 'Http',
+    inputs: { statusCode: 200, headers: json, body: "@body('Ler_tarefa')" },
+    runAfter: { Ler_tarefa: ['Succeeded'] },
+  },
   Responder_tarefa_inexistente: response(
     404,
-    { ok: false, status: 'erro', mensagem: 'Tarefa não encontrada.', detalhe: `@{concat('A tarefa ', ${TAREFA}, ' não existe — já foi concluída ou foi apagada.')}`, etapa: 'Ler_tarefa' },
+    {
+      ok: false,
+      status: 'erro',
+      mensagem: 'Tarefa não encontrada.',
+      detalhe: `@{concat('A tarefa ', ${TAREFA}, ' não existe — já foi concluída ou foi apagada.')}`,
+      etapa: 'Ler_tarefa',
+    },
     { Ler_tarefa: ['Failed', 'TimedOut'] },
   ),
 };
@@ -176,8 +285,16 @@ const consultar = {
 /* ---------- caminho "concluir" ---------- */
 const concluir = {
   Localizar_tarefa: onedrive('GetFileMetadataByPath', { path: `${cfg.pasta}/@{${TAREFA}}.json` }, {}),
-  Apagar_tarefa: onedrive('DeleteFile', { id: "@{body('Localizar_tarefa')?['Id']}" }, { Localizar_tarefa: ['Succeeded'] }),
-  Responder_concluida: response(200, { ok: true, status: 'apagada', tarefa: `@{${TAREFA}}` }, { Apagar_tarefa: ['Succeeded', 'Failed', 'Skipped'] }),
+  Apagar_tarefa: onedrive(
+    'DeleteFile',
+    { id: "@{body('Localizar_tarefa')?['Id']}" },
+    { Localizar_tarefa: ['Succeeded'] },
+  ),
+  Responder_concluida: response(
+    200,
+    { ok: true, status: 'apagada', tarefa: `@{${TAREFA}}` },
+    { Apagar_tarefa: ['Succeeded', 'Failed', 'Skipped'] },
+  ),
 };
 
 const scope = {
@@ -196,12 +313,14 @@ const scope = {
     // só letras e números no nome do arquivo: ninguém usa a URL para ler outros arquivos do OneDrive
     Tarefa_segura: {
       type: 'Compose',
-      inputs: "@take(replace(replace(replace(replace(replace(string(coalesce(triggerBody()?['tarefa'], '')), '/', ''), '\\', ''), '.', ''), ':', ''), ' ', ''), 64)",
+      inputs:
+        "@take(replace(replace(replace(replace(replace(string(coalesce(triggerBody()?['tarefa'], '')), '/', ''), '\\', ''), '.', ''), ':', ''), ' ', ''), 64)",
       runAfter: { Texto_recebido: ['Succeeded'] },
     },
     Rota_por_acao: {
       type: 'Switch',
-      expression: "@if(equals(triggerBody()?['ping'], true), 'ping', coalesce(triggerBody()?['acao'], 'converter'))",
+      expression:
+        "@if(equals(triggerBody()?['ping'], true), 'ping', coalesce(triggerBody()?['acao'], 'converter'))",
       cases: {
         Teste_de_conexao: {
           case: 'ping',
@@ -211,9 +330,12 @@ const scope = {
               pong: true,
               versao: VERSAO,
               modo: 'tarefa',
+              leitura_arquivo: true,
+              limite_arquivo_bytes: 20000000,
               agente: "@{outputs('Config_MatReader')?['agente']}",
               limite_caracteres: `@${LIM}`,
-              recebido_em: "@{formatDateTime(convertTimeZone(utcNow(),'UTC','E. South America Standard Time'),'dd/MM/yyyy HH:mm')}",
+              recebido_em:
+                "@{formatDateTime(convertTimeZone(utcNow(),'UTC','E. South America Standard Time'),'dd/MM/yyyy HH:mm')}",
             }),
           },
         },
@@ -241,10 +363,20 @@ const payload = {
   nodeId: 'Scope_MatReader_Converter_Matricula',
   serializedValue: scope,
   allConnectionData: {
-    Execute_Agent_and_wait: conn('shared_microsoftcopilotstudio', cfg.conexaoCopilot, 'shared_microsoftcopilotstudio'),
+    Execute_Agent_and_wait: conn(
+      'shared_microsoftcopilotstudio',
+      cfg.conexaoCopilot,
+      'shared_microsoftcopilotstudio',
+    ),
+    Recognize_text_in_image_or_document: conn(
+      'shared_commondataserviceforapps',
+      cfg.conexaoAiBuilder,
+      'shared_commondataserviceforapps',
+    ),
     Criar_tarefa: od(),
     Gravar_resultado: od(),
     Gravar_falha: od(),
+    Gravar_sem_texto: od(),
     Ler_tarefa: od(),
     Localizar_tarefa: od(),
     Apagar_tarefa: od(),
@@ -258,4 +390,6 @@ const outDir = personal ? join(root, 'power-automate', 'local') : join(root, 'po
 const file = join(outDir, personal ? 'scope-matreader.json' : 'scope-matreader.template.json');
 mkdirSync(outDir, { recursive: true });
 writeFileSync(file, JSON.stringify(payload));
-console.log(`[scope] ${personal ? 'scope pessoal' : 'modelo'} gravado em ${file} (${(JSON.stringify(payload).length / 1024).toFixed(1)} KB)`);
+console.log(
+  `[scope] ${personal ? 'scope pessoal' : 'modelo'} gravado em ${file} (${(JSON.stringify(payload).length / 1024).toFixed(1)} KB)`,
+);

@@ -17,7 +17,7 @@ import { useFlowStore } from '@/stores/flow';
 import { useLibraryStore } from '@/stores/library';
 import { useMatriculaStore } from '@/stores/matricula';
 import { useModalsStore } from '@/stores/modals';
-import { useSettingsStore, type SendPdfMode, type ThemeMode } from '@/stores/settings';
+import { useSettingsStore, type ReadingMode, type SendPdfMode, type ThemeMode } from '@/stores/settings';
 import { useUiStore } from '@/stores/ui';
 import type { OcrMode } from '@/services/extract/text-extraction';
 
@@ -34,6 +34,10 @@ const OCR_OPTIONS: InkOption<OcrMode>[] = [
   { value: 'sempre', label: 'Sempre', hint: 'ignora o texto do PDF' },
   { value: 'nunca', label: 'Nunca' },
 ];
+const READING_OPTIONS: InkOption<ReadingMode>[] = [
+  { value: 'fluxo', label: 'Leitura no fluxo', hint: 'AI Builder + agente (recomendado)' },
+  { value: 'local', label: 'Leitura no aparelho', hint: 'PDF e OCR local (compatibilidade)' },
+];
 const PDF_OPTIONS: InkOption<SendPdfMode>[] = [
   { value: 'auto', label: 'Automático', hint: 'só para o fluxo antigo' },
   { value: 'sempre', label: 'Sempre' },
@@ -44,7 +48,8 @@ const TIMEOUT_OPTIONS: InkOption<number>[] = [
   { value: 5, label: '5 minutos' },
   { value: 10, label: '10 minutos', hint: 'recomendado' },
   { value: 15, label: '15 minutos' },
-  { value: 20, label: '20 minutos', hint: 'o máximo do scope' },
+  { value: 20, label: '20 minutos' },
+  { value: 40, label: '40 minutos', hint: 'leitura e agente em documentos longos' },
 ];
 
 const showUrl = ref(false);
@@ -57,7 +62,7 @@ const pingChip = computed(() => {
   const r = flow.ping.result;
   if (!r) return '';
   const what = r.envelope ? `scope ${r.versao ?? 'MatReader'}` : 'fluxo antigo';
-  return `${what}${r.modo === 'tarefa' ? ' · por tarefa' : ''} · ${r.ms} ms`;
+  return `${what}${r.modo === 'tarefa' ? ' · por tarefa' : ''}${r.leituraArquivo ? ' · lê arquivos' : ' · sem leitura de arquivos'} · ${r.ms} ms`;
 });
 
 watch(
@@ -110,7 +115,7 @@ async function wipe() {
         <span class="mark"><Icon name="plug" /></span>
         <div>
           <h3>Fluxo do Power Automate</h3>
-          <p>O gatilho HTTP que leva o texto da matrícula ao agente do Copilot Studio e traz o JSON de volta.</p>
+          <p>Envia a matrícula para leitura e interpretação no fluxo e traz o JSON de volta.</p>
         </div>
       </header>
 
@@ -136,7 +141,7 @@ async function wipe() {
           <label for="set-timeout">Tempo-limite da conversão</label>
           <InkSelect id="set-timeout" v-model="settings.timeoutMin" :options="TIMEOUT_OPTIONS" />
         </div>
-        <div class="field">
+        <div v-if="settings.readingMode === 'local'" class="field">
           <label for="set-pdf">Enviar também o PDF</label>
           <InkSelect id="set-pdf" v-model="settings.sendPdf" :options="PDF_OPTIONS" />
         </div>
@@ -146,8 +151,8 @@ async function wipe() {
         <summary><Icon name="info" size="sm" />Como conectar o agente (scope pronto para colar)</summary>
         <ol>
           <li>No Power Automate, crie um fluxo com o gatilho <b>Quando uma solicitação HTTP é recebida</b> — método POST, quem pode disparar: <b>Qualquer pessoa</b>.</li>
-          <li>Abaixo do gatilho, <b>cole o scope</b> de <code>power-automate/</code> (Ctrl+V no designer). Nas ações do <b>OneDrive for Business</b>, escolha a sua conexão.</li>
-          <li>Salve, copie a <b>URL HTTP</b> do gatilho e cole aqui. <b>Testar conexão</b> deve responder <code>mat-flow/3.0</code>, por tarefa.</li>
+          <li>Abaixo do gatilho, <b>cole o scope</b> de <code>power-automate/</code> (Ctrl+V no designer). Escolha suas conexões do <b>OneDrive for Business</b>, <b>AI Builder</b> e <b>Copilot Studio</b>.</li>
+          <li>Salve, copie a <b>URL HTTP</b> do gatilho e cole aqui. <b>Testar conexão</b> deve responder <code>mat-flow/3.1</code>, por tarefa, com leitura de arquivos.</li>
         </ol>
         <p class="muted">
           Contrato <code>{{ CONTRACT }}</code>: o fluxo responde na hora com o número da tarefa e o agente trabalha em segundo plano (pode levar vários minutos); o app consulta até o resultado ficar pronto — e retoma sozinho se você fechar a página no meio.
@@ -159,11 +164,16 @@ async function wipe() {
       <header class="sheet-card-head">
         <span class="mark"><Icon name="doc" /></span>
         <div>
-          <h3>Leitura do PDF</h3>
-          <p>O texto sai do próprio PDF; páginas digitalizadas passam por OCR aqui no aparelho.</p>
+          <h3>Leitura da matrícula</h3>
+          <p>No fluxo, o documento é enviado ao AI Builder antes do agente, sem OCR ou limpeza de texto no aparelho. Requer internet e créditos do AI Builder.</p>
         </div>
       </header>
       <div class="field">
+        <label for="set-reading">Onde ler o documento</label>
+        <InkSelect id="set-reading" v-model="settings.readingMode" :options="READING_OPTIONS" />
+        <small v-if="settings.readingMode === 'fluxo'">O PDF é enviado obrigatoriamente, sem redução automática de qualidade. Limite de 20 MB e 2.000 páginas.</small>
+      </div>
+      <div v-if="settings.readingMode === 'local'" class="field">
         <label for="set-ocr">Leitura de páginas digitalizadas (OCR)</label>
         <InkSelect id="set-ocr" v-model="settings.ocrMode" :options="OCR_OPTIONS" />
       </div>

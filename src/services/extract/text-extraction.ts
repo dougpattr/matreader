@@ -6,7 +6,7 @@ import { ocrImage } from '@/services/ocr/ocr-service';
 import { cleanText } from './clean-text';
 
 export type OcrMode = 'auto' | 'sempre' | 'nunca';
-export type TextMethod = 'pdf-texto' | 'ocr' | 'misto' | 'nenhum';
+export type TextMethod = 'pdf-texto' | 'ocr' | 'misto' | 'nenhum' | 'ai-builder';
 
 export interface ExtractedText {
   text: string;
@@ -105,6 +105,7 @@ export async function extractText(files: File[], mode: OcrMode, onProgress: Prog
 }
 
 export const METHOD_LABEL: Record<TextMethod, string> = {
+  'ai-builder': 'AI Builder (no fluxo)',
   'pdf-texto': 'texto do próprio PDF',
   ocr: 'OCR (página digitalizada)',
   misto: 'texto do PDF + OCR',

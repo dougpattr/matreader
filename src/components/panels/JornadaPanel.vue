@@ -78,7 +78,7 @@ const recent = computed(() => flow.history.slice(0, 4));
     <dl v-if="flow.extracted" class="facts-mini">
       <div><dt>Páginas</dt><dd>{{ flow.extracted.pages }}</dd></div>
       <div><dt>Texto</dt><dd>{{ methodLabel(flow.extracted.method) }}</dd></div>
-      <div><dt>Caracteres</dt><dd>{{ fmtInt(flow.extracted.chars) }}</dd></div>
+      <div><dt>Caracteres</dt><dd>{{ flow.extracted.method === 'ai-builder' && !flow.extracted.chars ? 'aguardando leitura no fluxo' : fmtInt(flow.extracted.chars) }}</dd></div>
       <div v-if="flow.extracted.ocrConfidence !== null"><dt>OCR</dt><dd>{{ flow.extracted.ocrConfidence }}% de confiança</dd></div>
     </dl>
     <div v-if="flow.lastText || flow.lastRaw" class="row">
@@ -105,7 +105,7 @@ const recent = computed(() => flow.history.slice(0, 4));
         <li :class="{ done: settings.flowConfigured }"><b>Fluxo</b> — gatilho HTTP + o scope do MatReader no Power Automate.</li>
         <li :class="{ done: settings.flowConfigured }"><b>URL</b> — cole o endereço do gatilho em Configurações.</li>
         <li :class="{ done: !!flow.ping.result }"><b>Teste</b> — "Testar conexão" responde na hora, sem gastar o agente.</li>
-        <li><b>Converta</b> — solte o PDF na Entrada; o texto (ou OCR) segue a trilha acima.</li>
+        <li><b>Converta</b> — solte o PDF na Entrada; o fluxo lê e interpreta o documento.</li>
       </ol>
       <button v-if="!settings.flowConfigured" type="button" class="btn btn--sm btn--primary" @click="modals.settings = true">
         <Icon name="plug" size="sm" />Configurar o fluxo

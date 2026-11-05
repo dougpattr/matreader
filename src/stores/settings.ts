@@ -5,9 +5,11 @@ import type { OcrMode } from '@/services/extract/text-extraction';
 
 export type ThemeMode = 'auto' | 'claro' | 'escuro';
 export type SendPdfMode = 'auto' | 'sempre' | 'nunca';
+export type ReadingMode = 'fluxo' | 'local';
 
 export interface SettingsState {
   flowUrl: string;
+  readingMode: ReadingMode;
   /** PDF em base64 junto do texto: só o fluxo antigo precisa */
   sendPdf: SendPdfMode;
   ocrMode: OcrMode;
@@ -27,6 +29,7 @@ const KEY_V1 = 'matreader:settings:v1';
 const defaults = (): SettingsState => ({
   flowUrl: import.meta.env.VITE_DEFAULT_FLOW_URL ?? '',
   sendPdf: 'auto',
+  readingMode: 'fluxo',
   ocrMode: 'auto',
   timeoutMin: 10,
   autosave: true,

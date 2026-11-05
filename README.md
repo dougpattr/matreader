@@ -15,7 +15,7 @@ PWA em **Ionic 8 + Vue 3 + TypeScript**, com **WebAssembly** em três frentes (n
 | Bloco | Para quê |
 |---|---|
 | **Entrada** | Solte o PDF ou as fotos (no celular, **Fotografar** abre a câmera). Também aceita JSON colado, arquivo `.json` e um exemplo fictício. |
-| **Jornada** | Acompanha a conversão estação por estação — arquivo, texto (PDF ou OCR), envio, agente, conferência — com tempo, histórico, o texto exato enviado e a resposta crua. **Testar conexão** confere o fluxo sem gastar o agente. |
+| **Jornada** | Acompanha preparação, envio, leitura no fluxo, agente e conferência — com tempo, histórico e resposta crua. No modo local, mostra também o texto enviado. **Testar conexão** confere a capacidade do fluxo sem gastar OCR ou agente. |
 | **Resumo** | Número, situação, área, vértices, donos, ônus e o placar das **conferências automáticas**. **Copiar resumo** gera um texto pronto para Teams ou e-mail. |
 | **Terreno** | Polígono sobre o satélite (Esri) ou como desenho técnico (offline). Arraste para mover, pegador para girar, ajuste fino (giro exato, espelhos, opacidade, amarração). Exporta **KML, KMZ, Google Maps e croqui PNG**. |
 | **Documento** | A matrícula montada por seções, com **busca dentro do texto**, cópia de códigos e impressão só do documento (com croqui). |
@@ -54,13 +54,10 @@ power-automate/   modelo do scope para colar no Power Automate
 
 ```mermaid
 flowchart LR
-  A[PDF ou fotos] --> B{tem camada de texto?}
-  B -- sim --> C[pdf.js extrai o texto]
-  B -- não --> D[OCR Tesseract em WebAssembly]
-  C --> E[limpeza: cabeçalhos, hifenização, páginas]
-  D --> E
-  E -->|texto + metadados| F[Power Automate · gatilho HTTP]
-  F --> G[agente do Copilot Studio]
+  A[PDF ou fotos] --> B[Preparar PDF sem reduzir qualidade]
+  B -->|arquivo completo + metadados| F[Power Automate · gatilho HTTP]
+  F --> C[AI Builder · reconhecimento de texto]
+  C --> G[agente do Copilot Studio]
   G -->|JSON da matrícula| F
   F -->|envelope ok/resposta/meta| H[leitor tolerante + normalização]
   H --> I[núcleo geométrico WASM]
@@ -88,26 +85,28 @@ Os ícones do PWA também são gerados com **resvg em WebAssembly** (`npm run ic
 
 ## Integração com o Power Automate
 
-O app extrai o texto no aparelho e envia só o texto ao seu fluxo. O agente costuma levar **vários minutos**, e a resposta HTTP síncrona do Power Automate morre em ~2 min (era o erro 504 `'Responder_sucesso' … timed out`). Por isso o contrato `matreader/fluxo@3` trabalha **por tarefa**: o fluxo responde na hora com um número, o agente roda em segundo plano e grava o resultado num arquivo do OneDrive, e o app consulta até ficar pronto.
+Por padrão, o app envia o **arquivo completo** ao scope `mat-flow/3.1`. O **AI Builder** reconhece o texto antes do agente, sem OCR ou limpeza de texto no aparelho. Um PDF único mantém os bytes originais; PDFs e fotos múltiplos são reunidos sem reduzir a resolução. Limites: **20 MB e 2.000 páginas** por envio. A opção **Leitura no aparelho** mantém o caminho anterior para compatibilidade.
+
+O contrato `matreader/fluxo@3` trabalha **por tarefa**: o fluxo responde na hora com um número, faz a leitura e chama o agente em segundo plano, grava o resultado no OneDrive e o app consulta até ficar pronto. É necessário atualizar o scope e configurar a conexão do AI Builder; [instruções de atualização](power-automate/README.md).
 
 ```jsonc
 // 1. converter (POST) → resposta imediata
 { "contrato": "matreader/fluxo@3", "acao": "converter", "app": { "nome": "MatReader", "versao": "4.1.0" },
-  "filename": "…", "texto": "=== Página 1 ===\n…", "paginas": 3, "metodo_texto": "pdf-texto | ocr | misto",
-  "ocr_confianca": 91, "caracteres": 18234, "sha256": "…" }
-→ { "ok": true, "status": "processando", "tarefa": "08584…", "versao": "mat-flow/3.0" }
+  "filename": "matricula.pdf", "leitura": "fluxo", "mime_type": "application/pdf", "base64Encoded": "…",
+  "texto": "", "paginas": 3, "metodo_texto": "ai-builder", "ocr_confianca": null, "caracteres": 0, "sha256": "…" }
+→ { "ok": true, "status": "processando", "tarefa": "08584…", "versao": "mat-flow/3.1" }
 
 // 2. consultar (a cada 5 s, depois 10 s) até sair de "processando"
 { "contrato": "matreader/fluxo@3", "acao": "consultar", "tarefa": "08584…" }
 → { "ok": true, "status": "processando" }
-→ { "ok": true, "versao": "mat-flow/3.0", "resposta": "<texto do agente com o JSON>", "meta": { … } }
+→ { "ok": true, "versao": "mat-flow/3.1", "resposta": "<texto do agente com o JSON>", "meta": { … } }
 → { "ok": false, "mensagem": "…", "detalhe": "…", "etapa": "…" }
 
 // 3. concluir: apaga o arquivo da tarefa no OneDrive
 { "contrato": "matreader/fluxo@3", "acao": "concluir", "tarefa": "08584…" }
 
 // teste de conexão (não gasta o agente)
-{ "ping": true, "acao": "ping" }  →  { "ok": true, "pong": true, "versao": "mat-flow/3.0", "modo": "tarefa", "agente": "…" }
+{ "ping": true, "acao": "ping" }  →  { "ok": true, "pong": true, "versao": "mat-flow/3.1", "modo": "tarefa", "leitura_arquivo": true, "agente": "…" }
 ```
 
 Se a página fechar no meio, a tarefa fica guardada no aparelho e o app **retoma a consulta sozinho** ao abrir de novo (até 45 min). O número da tarefa é saneado no fluxo antes de virar nome de arquivo. Passo a passo em [`power-automate/README.md`](power-automate/README.md). O app também aceita o fluxo antigo (resposta = JSON direto) e o síncrono `fluxo@2`.
@@ -137,4 +136,4 @@ O workflow **Publicar no GitHub Pages** (`.github/workflows/pages.yml`) gera o b
 
 ## Privacidade
 
-Saem do aparelho apenas: o **texto da matrícula** (para o seu fluxo), as **imagens de satélite** e a **busca de endereço** (Nominatim). Documento, OCR, acervo, PDFs e impressão acontecem no aparelho. A URL do fluxo fica só no navegador do usuário — nunca no código.
+O **arquivo da matrícula** é enviado ao seu Power Automate para leitura pelo AI Builder e interpretação pelo agente. No modo local, sai o texto e, conforme a configuração, também o PDF. O mapa consulta imagens de satélite e endereços (Nominatim). Documento montado, acervo, junção de PDFs e impressão ficam no aparelho. A URL do fluxo é guardada no navegador do usuário.

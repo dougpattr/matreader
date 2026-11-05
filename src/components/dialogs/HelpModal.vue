@@ -15,7 +15,7 @@ const modals = useModalsStore();
         <h3><Picto name="feather" :size="26" />1 · Trazer a matrícula</h3>
         <ul>
           <li><b>Arraste o PDF ou as fotos</b> na paisagem da Entrada (ou toque em <b>Converter com IA</b>). No celular, <b>Fotografar</b> abre a câmera.</li>
-          <li>O app lê o texto do PDF — ou faz <b>OCR no próprio aparelho</b> nas páginas digitalizadas — e envia só o texto ao seu fluxo do Power Automate, onde o agente do Copilot Studio devolve o JSON.</li>
+          <li>Por padrão, o app envia o <b>documento ao Power Automate</b>. O AI Builder reconhece o texto e o agente do Copilot Studio interpreta a matrícula e devolve o JSON. A leitura no aparelho fica disponível em Configurações.</li>
           <li>Sem fluxo? <b>Copiar prompt</b>, cole numa IA com o arquivo e traga a resposta com <b>Colar JSON</b>.</li>
         </ul>
 
@@ -39,7 +39,7 @@ const modals = useModalsStore();
         <p><kbd>1</kbd>–<kbd>8</kbd> pulam entre os blocos · <kbd>Ctrl</kbd>+<kbd>S</kbd> salva · <kbd>Ctrl</kbd>+<kbd>P</kbd> imprime · <kbd>Ctrl</kbd>+<kbd>O</kbd> converte · <kbd>?</kbd> abre esta ajuda · <kbd>Esc</kbd> fecha a tela cheia.</p>
 
         <h3><Icon name="shield" size="sm" />O que sai do aparelho</h3>
-        <p>Só o <b>texto da matrícula</b> (para o seu fluxo), as <b>imagens de satélite</b> e a <b>busca de endereço</b>. Documento, OCR, acervo, PDFs e impressão acontecem aqui dentro.</p>
+        <p>O <b>arquivo da matrícula</b> vai ao seu fluxo para leitura pelo AI Builder e interpretação pelo agente. No modo local, sai o texto e, conforme a configuração, também o PDF. O mapa busca imagens de satélite e endereços. Acervo, junção de PDFs e impressão ficam no aparelho.</p>
       </div>
   </InkSheet>
 </template>

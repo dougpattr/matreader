@@ -78,7 +78,7 @@ function openPrompt() {
 
       <p class="privacy">
         <Icon name="shield" size="sm" />
-        <span><b>Fica no aparelho:</b> documento, acervo, OCR e junção de PDFs. <b>Sai daqui:</b> o texto da matrícula vai ao seu fluxo do Power Automate, e o mapa busca imagens e endereços.</span>
+        <span><b>Fica no aparelho:</b> documento montado, acervo e junção de PDFs. <b>Sai daqui:</b> o arquivo da matrícula vai ao Power Automate para leitura pelo AI Builder e interpretação pelo agente. No modo local, vai o texto e, conforme a configuração, também o PDF. O mapa busca imagens e endereços.</span>
       </p>
     </div>
   </Tile>
